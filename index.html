@@ -178,10 +178,10 @@ label{display:block;font-size:13px;color:var(--mut);margin:0 0 6px;font-weight:5
 @keyframes up{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
 .handle{width:38px;height:4px;border-radius:99px;background:var(--line2);margin:0 auto 14px}
 
-/* ---------- RPM block ---------- */
-.rpm{border-left:3px solid var(--coach);padding-left:12px;margin:2px 0}
-.rpm .lbl{font-size:11px;font-weight:750;letter-spacing:.1em;color:var(--coach);text-transform:uppercase}
-.rpm .val{font-size:14px;margin-top:2px;line-height:1.45}
+/* ---------- Navigation to Destination — Block ---------- */
+.zk{border-left:3px solid var(--coach);padding-left:12px;margin:2px 0}
+.zk .lbl{font-size:11px;font-weight:750;letter-spacing:.1em;color:var(--coach);text-transform:uppercase}
+.zk .val{font-size:14px;margin-top:2px;line-height:1.45}
 
 /* ---------- Toast ---------- */
 .toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);z-index:80;
@@ -225,7 +225,7 @@ label{display:block;font-size:13px;color:var(--mut);margin:0 0 6px;font-weight:5
 /* ==========================================================================
    BloomGoal Coach — Prototyp
    Datenmodell + Logik exakt nach Blueprint (Hauptinformationen.md),
-   erweitert um RPM-Struktur (Result / Purpose / Massive Action Plan)
+   erweitert um den Block Navigation to Destination (Result / Purpose / Aktion Plan)
    und die Primärziel-Fokusregel.
    ========================================================================== */
 
@@ -1062,7 +1062,7 @@ function viewDash(){
   </div>
 
   <div class="card">
-    <h3 style="margin-bottom:4px">Welche eine Aktion heute?</h3>
+    <h3 style="margin-bottom:4px">Welche Aktion heute?</h3>
     <p class="small mut" style="margin-bottom:10px">Abhaken erst, wenn du sie wirklich gemacht hast.</p>
     ${best?`<p class="small mut" style="margin-bottom:10px">Wirksamste Aktion: <b style="color:var(--txt)">${esc(best.title)}</b></p>`:''}
     ${optionHTML||`<p class="small mut">${COACH.noTasks}</p>`}
@@ -1123,7 +1123,7 @@ function viewGarden(){
 }
 
 /* ==========================================================================
-   VIEW: Ziel-Detailseite (8.3) inkl. RPM-Block
+   VIEW: Ziel-Detailseite (8.3) inkl. Navigation to Destination
    ========================================================================== */
 function viewGoal(id){
   const g=DB.goals.find(x=>x.goal_id===id);
@@ -1175,13 +1175,13 @@ function viewGoal(id){
   </div>
 
   <div class="card">
-    <h3 style="margin-bottom:12px">RPM-Block</h3>
+    <h3 style="margin-bottom:12px">Navigation to Destination</h3>
     <div class="col" style="gap:12px">
-      <div class="rpm"><div class="lbl">Result — Was genau?</div>
+      <div class="zk"><div class="lbl">Result — Was genau?</div>
         <div class="val">${esc(g.success_criteria)||'<span class="mut">offen</span>'}</div></div>
-      <div class="rpm"><div class="lbl">Purpose — Warum?</div>
+      <div class="zk"><div class="lbl">Purpose — Warum?</div>
         <div class="val">${esc(g.purpose)||'<span class="mut">offen</span>'}</div></div>
-      <div class="rpm"><div class="lbl">Massive Action Plan</div>
+      <div class="zk"><div class="lbl">Aktion Plan</div>
         <div class="val">${open.length} offene Schritte · ${done.length} erledigt ·
           ${g.completed_points} von ${g.total_points} Punkten</div></div>
     </div>
@@ -1461,8 +1461,8 @@ function viewCheckin(){
 }
 
 /* ==========================================================================
-   VIEW: Ziel anlegen — RPM-geführter Coach-Dialog (8.2)
-   Schritt 1 Result · 2 Purpose · 3 Messbarkeit + Zeit · 4 Priorität · 5 Massive Action Plan
+   VIEW: Ziel anlegen — geführter Coach-Dialog (8.2)
+   Schritt 1 Result · 2 Purpose · 3 Messbarkeit + Zeit · 4 Priorität · 5 Aktion Plan
    ========================================================================== */
 const AREAS=Object.keys(LIFE_AREA_HUE);
 let NEW={step:1,title:'',purpose:'',success:'',target:'',area:'Gesundheit',
@@ -1530,7 +1530,7 @@ function viewNew(){
 
   let body='';
   if(s===1){
-    body=`<div class="rpm" style="margin-bottom:14px">
+    body=`<div class="zk" style="margin-bottom:14px">
         <div class="lbl">Schritt 1 — Result</div>
         <div class="val">Was möchtest du konkret erreichen?</div></div>
       <label>Zielname</label>
@@ -1549,14 +1549,14 @@ function viewNew(){
       </div>`;
   }
   if(s===2){
-    body=`<div class="rpm" style="margin-bottom:14px">
+    body=`<div class="zk" style="margin-bottom:14px">
         <div class="lbl">Schritt 2 — Purpose</div>
         <div class="val">Warum ist dieses Ziel für dich wichtig?</div></div>
       <textarea id="f-purpose" placeholder="Der Grund, der dich auch an schlechten Tagen trägt.">${esc(NEW.purpose)}</textarea>
       <p class="small mut mt">Das Warum ist der Teil, den du an Tagen mit wenig Energie brauchst.</p>`;
   }
   if(s===3){
-    body=`<div class="rpm" style="margin-bottom:14px">
+    body=`<div class="zk" style="margin-bottom:14px">
         <div class="lbl">Schritt 3 — Messbarkeit</div>
         <div class="val">Woran erkennst du, dass das Ziel erfüllt ist?</div></div>
       <textarea id="f-success" placeholder="${esc(ERFOLG_BEISPIEL[NEW.area]||'Woran genau merkst du, dass du am Ziel bist?')}">${esc(NEW.success)}</textarea>
@@ -1564,7 +1564,7 @@ function viewNew(){
       <input type="date" id="f-target" value="${NEW.target}">`;
   }
   if(s===4){
-    body=`<div class="rpm" style="margin-bottom:14px">
+    body=`<div class="zk" style="margin-bottom:14px">
         <div class="lbl">Schritt 4 — Priorität</div>
         <div class="val">Wie ordnet sich dieses Ziel ein?</div></div>
       ${scaleRow('importance','Wie wichtig ist dir dieses Ziel?')}
@@ -1581,8 +1581,8 @@ function viewNew(){
   if(s===5){
     const sugg=suggestTasks(NEW.area);
     const vorhanden = NEW.editing ? goalTasks(NEW.editing) : [];
-    body=`<div class="rpm" style="margin-bottom:14px">
-        <div class="lbl">Schritt 5 — Massive Action Plan</div>
+    body=`<div class="zk" style="margin-bottom:14px">
+        <div class="lbl">Schritt 5 — Aktion Plan</div>
         <div class="val">Welche Schritte bringen dich diesem Ziel näher?</div></div>
       ${vorhanden.length?`<p class="small mut" style="margin-bottom:10px">
         Dieses Ziel hat bereits ${vorhanden.length} Schritte. Sie bleiben erhalten —
@@ -1871,8 +1871,8 @@ function bloomScreen(g){
     <h1 style="margin-top:10px">Ziel erreicht</h1>
     <p class="mt">${COACH.bloom}</p>
     <div class="card mt" style="text-align:left">
-      <div class="rpm"><div class="lbl">Result</div><div class="val">${esc(g.success_criteria)||esc(g.title)}</div></div>
-      <div class="rpm mt"><div class="lbl">Purpose</div><div class="val">${esc(g.purpose)||'—'}</div></div>
+      <div class="zk"><div class="lbl">Result</div><div class="val">${esc(g.success_criteria)||esc(g.title)}</div></div>
+      <div class="zk mt"><div class="lbl">Purpose</div><div class="val">${esc(g.purpose)||'—'}</div></div>
     </div>
     <p class="small mut mt">${g.total_points} Wachstumspunkte ·
       gestartet ${new Date(g.start_date).toLocaleDateString('de-DE')}</p>
