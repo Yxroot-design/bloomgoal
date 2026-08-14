@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=yes">
 <title>BloomGoal Coach</title>
-<meta name="description" content="Zielerreichungs-Coach: jedes Ziel wächst als Cyberblume.">
+<meta name="description" content="BloomGoal Coach — goal coaching where every goal grows as a cyberflower. Zielerreichung: jedes Ziel wächst als Cyberblume.">
 <meta name="theme-color" content="#080e1c">
 <meta name="color-scheme" content="dark">
 <!-- Auf dem Handy „Zum Home-Bildschirm" ergibt eine App ohne Browserleiste -->
@@ -196,6 +196,13 @@ label{display:block;font-size:13px;color:var(--mut);margin:0 0 6px;font-weight:5
   font-size:13px;font-weight:600;color:var(--mut);min-height:40px}
 .reps button.on{background:var(--vit);color:#04231a;border-color:var(--vit)}
 
+.topbar{display:flex;justify-content:flex-end;margin:0 0 10px}
+.langsw{display:inline-flex;gap:2px;background:var(--bg2);border:1px solid var(--line);
+  border-radius:11px;padding:2px;flex:0 0 auto}
+.langsw button{padding:6px 11px;border-radius:9px;font-size:12px;font-weight:700;
+  letter-spacing:.04em;color:var(--mut);min-height:32px}
+.langsw button.on{background:var(--coach);color:#0d0524}
+
 /* ---------- Punktewähler ---------- */
 .pts{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
 .pts button{padding:9px 0;border-radius:9px;background:var(--bg2);border:1px solid var(--line);
@@ -231,7 +238,7 @@ label{display:block;font-size:13px;color:var(--mut);margin:0 0 6px;font-weight:5
 
 /* ---------- Persistenz ---------- */
 const KEY='bloomgoal.v1';
-let DB={goals:[],tasks:[],checkins:[],events:[],lastCheck:null,name:''};
+let DB={goals:[],tasks:[],checkins:[],events:[],lastCheck:null,name:'',lang:null};
 function load(){
   try{
     const r=localStorage.getItem(KEY);
@@ -246,6 +253,7 @@ function load(){
     DB.events   = Array.isArray(o.events)?o.events:[];
     DB.lastCheck= o.lastCheck||null;
     DB.name     = typeof o.name==='string'?o.name:'';
+    DB.lang     = (o.lang==='en'||o.lang==='de')?o.lang:null;
     DB.goals=DB.goals.filter(g=>g&&g.goal_id);
     DB.tasks=DB.tasks.filter(t=>t&&t.task_id&&DB.goals.some(g=>g.goal_id===t.goal_id));
   }catch(e){ /* unlesbare Daten: mit leerem Stand starten statt abstürzen */ }
@@ -258,7 +266,7 @@ function save(){
   }catch(e){
     /* Speicher voll oder gesperrt (z.B. privater Modus) — einmal melden */
     if(!save._gemeldet){ save._gemeldet=true;
-      try{ toast('Speichern nicht möglich. Daten gelten nur für diese Sitzung.'); }catch(e2){}
+      try{ toast(W('saveBlocked')); }catch(e2){}
     }
   }
 }
@@ -298,9 +306,42 @@ function calculateFlowerState(v){
   if(v>=40)return 'weak';   if(v>=20)return 'drooping';
   return 'critical';
 }
-const STATE_LABEL={strong:'Stark',stable:'Stabil',weak:'Geschwächt',drooping:'Erlahmt',critical:'Kritisch'};
-const PHASE_LABEL={1:'Erde mit Keim',2:'Keim bricht durch',3:'Kleiner Stängel',4:'Stängel mit Blättern',
+/* ==========================================================================
+   SPRACHE
+   Alle sichtbaren Texte liegen in TXT. LANG entscheidet, welche Fassung
+   gezeigt wird; T ist die Abkürzung für den aktuellen Satz. Die Daten selbst
+   sind sprachneutral: Lebensbereiche werden intern als Schlüssel gespeichert
+   (health, learning …) und erst bei der Anzeige übersetzt. Dadurch bleibt ein
+   Ziel dasselbe Ziel, egal in welcher Sprache man es angelegt hat.
+   ========================================================================== */
+let LANG='de';
+const TXT={de:{},en:{}};
+const T=()=>TXT[LANG];
+function setLang(l){
+  LANG = (l==='en')?'en':'de';
+  DB.lang=LANG;
+  try{ document.documentElement.setAttribute('lang',LANG); }catch(e){}
+  save();
+}
+/* Beim ersten Start nach der Browsersprache entscheiden */
+function detectLang(){
+  try{
+    const n=(navigator.languages&&navigator.languages[0])||navigator.language||'de';
+    return /^de/i.test(n)?'de':'en';
+  }catch(e){ return 'de'; }
+}
+const locale=()=>LANG==='en'?'en-US':'de-DE';
+/* Zahl mit Einheit, Ein- und Mehrzahl richtig */
+const plural=(n,ein,viele)=>n+' '+(n===1?ein:viele);
+
+TXT.de.STATE_LABEL={strong:'Stark',stable:'Stabil',weak:'Geschwächt',drooping:'Erlahmt',critical:'Kritisch'};
+TXT.en.STATE_LABEL={strong:'Strong',stable:'Steady',weak:'Weakening',drooping:'Drooping',critical:'Critical'};
+TXT.de.PHASE_LABEL={1:'Erde mit Keim',2:'Keim bricht durch',3:'Kleiner Stängel',4:'Stängel mit Blättern',
   5:'Kräftige Pflanze mit Knospe',6:'Blüte öffnet sich',7:'Voll erblühte Cyberblume'};
+TXT.en.PHASE_LABEL={1:'Seed in the soil',2:'Sprout breaking through',3:'Young stem',4:'Stem with leaves',
+  5:'Strong plant with a bud',6:'Bloom opening',7:'Cyberflower in full bloom'};
+const STATE_LABEL=new Proxy({},{get:(_,k)=>T().STATE_LABEL[k]});
+const PHASE_LABEL=new Proxy({},{get:(_,k)=>T().PHASE_LABEL[k]});
 
 /* ---------- Punkteleiter ----------
    Feine Abstufung unten, größere Sprünge oben. Dadurch lassen sich echte
@@ -312,12 +353,17 @@ const POINTS=[1,2,3,4,5,6,7,8,9,10,12,14,16,18,20,25,30,40,50];
 /* ---------- Aufgabentypen: Vitalitätsgewinn (7.5) ----------
    Der Typ ergibt sich jetzt aus den Punkten, nicht umgekehrt. */
 const TASK_TYPE={
-  mini:     {label:'Zwischenschritt',      points:2,  vitality:5,  von:1,  bis:3},
-  small:    {label:'Kleiner Schritt',      points:6,  vitality:8,  von:4,  bis:9},
-  normal:   {label:'Normaler Schritt',     points:14, vitality:10, von:10, bis:18},
-  milestone:{label:'Wichtiger Meilenstein',points:25, vitality:20, von:20, bis:30},
-  key:      {label:'Schlüsselaufgabe',     points:40, vitality:30, von:40, bis:1e9}
+  mini:     {points:2,  vitality:5,  von:1,  bis:3},
+  small:    {points:6,  vitality:8,  von:4,  bis:9},
+  normal:   {points:14, vitality:10, von:10, bis:18},
+  milestone:{points:25, vitality:20, von:20, bis:30},
+  key:      {points:40, vitality:30, von:40, bis:1e9}
 };
+TXT.de.TYPE={mini:'Zwischenschritt',small:'Kleiner Schritt',normal:'Normaler Schritt',
+  milestone:'Wichtiger Meilenstein',key:'Schlüsselaufgabe'};
+TXT.en.TYPE={mini:'Micro step',small:'Small step',normal:'Regular step',
+  milestone:'Major milestone',key:'Key task'};
+const typeLabel=k=>T().TYPE[k]||'';
 const TYPE_ORDER=['mini','small','normal','milestone','key'];
 /* Aus einem Punktwert den passenden Typ ableiten */
 function pointsToType(p){
@@ -348,10 +394,16 @@ function logEvent(goal,type,dp,dv,oldPhase,newPhase){
    mit ihren Punkten auf das Ziel — dadurch wächst die Blume Tag für Tag,
    statt mit einem Klick fertig zu sein. */
 const REPEAT={
-  once:  {label:'Einmalig',  kurz:'',           tage:0,  anzahl:[1]},
-  daily: {label:'Täglich',   kurz:'täglich',    tage:1,  anzahl:[7,14,21,30,60,90]},
-  weekly:{label:'Wöchentlich',kurz:'wöchentlich',tage:7, anzahl:[4,8,12,26,52]}
+  once:  {tage:0, anzahl:[1]},
+  daily: {tage:1, anzahl:[7,14,21,30,60,90]},
+  weekly:{tage:7, anzahl:[4,8,12,26,52]}
 };
+TXT.de.REP={once:'Einmalig',daily:'Täglich',weekly:'Wöchentlich'};
+TXT.en.REP={once:'One time',daily:'Daily',weekly:'Weekly'};
+TXT.de.REPS={once:'',daily:'täglich',weekly:'wöchentlich'};
+TXT.en.REPS={once:'',daily:'daily',weekly:'weekly'};
+const repLabel=k=>T().REP[k]||'';
+const repShort=k=>T().REPS[k]||'';
 const repeatOf=t=>REPEAT[t&&t.repeat]?t.repeat:'once';
 const repeatTotal=t=>Math.max(1,Math.round(Number(t&&t.repeat_total)||1));
 const doneCount=t=>Math.max(0,Math.round(Number(t&&t.done_count)||0));
@@ -513,9 +565,18 @@ function goalsAtRisk(){
    Neigung, Leuchtkraft und Größe.
    ========================================================================== */
 const LIFE_AREA_HUE={
-  'Gesundheit':138,'Finanzen':44,'Lernen':196,'Karriere':258,
-  'Beziehungen':334,'Wohnen':18,'Kreativität':296,'Persönlich':170
+  health:138, money:44, learning:196, career:258,
+  people:334, home:18, creative:296, personal:170
 };
+TXT.de.AREA={health:'Gesundheit',money:'Finanzen',learning:'Lernen',career:'Karriere',
+  people:'Beziehungen',home:'Wohnen',creative:'Kreativität',personal:'Persönlich'};
+TXT.en.AREA={health:'Health',money:'Money',learning:'Learning',career:'Career',
+  people:'Relationships',home:'Home',creative:'Creative work',personal:'Personal growth'};
+const areaLabel=k=>T().AREA[k]||k;
+/* Ältere Stände haben deutsche Klartextnamen gespeichert */
+const AREA_ALT={'Gesundheit':'health','Finanzen':'money','Lernen':'learning','Karriere':'career',
+  'Beziehungen':'people','Wohnen':'home','Kreativität':'creative','Persönlich':'personal',
+  'Kreativitaet':'creative','Persoenlich':'personal'};
 /* HSL wird direkt zu Hex gerechnet — hsl() ist in SVG-Attributen nicht überall
    zuverlässig, Hex funktioniert in jedem Renderer und in jedem Export. */
 function hsl(h,s,l){
@@ -787,7 +848,9 @@ function flowerSVG(g,size){
 
   return `<svg class="flower" viewBox="0 0 ${W} ${H}" width="${size}" height="${F(size*H/W)}"
       xmlns="http://www.w3.org/2000/svg" role="img"
-      aria-label="Cyberblume, Wachstumsphase ${phase} von 7, Vitalität ${Math.round(vit)} Prozent">
+      aria-label="${LANG==='en'
+        ? 'Cyberflower, growth stage '+phase+' of 7, vitality '+Math.round(vit)+' percent'
+        : 'Cyberblume, Wachstumsphase '+phase+' von 7, Vitalität '+Math.round(vit)+' Prozent'}">
     <defs>
       <radialGradient id="${gid}" cx="50%" cy="42%" r="52%">
         <stop offset="0%" stop-color="${hsl(hue,90,60)}" stop-opacity="${F(glow*0.5)}"/>
@@ -808,8 +871,10 @@ function flowerSVG(g,size){
 
 /* ==========================================================================
    COACH — Tonalität: klar, unterstützend, nie beschämend (6.5)
+   Die englische Fassung ist keine wörtliche Übersetzung, sondern so
+   formuliert, wie es im amerikanischen Englisch natürlich klingt.
    ========================================================================== */
-const COACH={
+TXT.de.COACH={
   focus:[
     'Heute zählt nicht alles. Heute zählt der nächste wirksame Schritt.',
     'Dieses Ziel ist aktuell wichtiger als die anderen. Fokus hier.',
@@ -834,17 +899,43 @@ const COACH={
   noTasks:'Dieses Ziel hat noch keine offenen Schritte. Lege einen an — klein genügt.',
   noGoals:'Noch kein Ziel gepflanzt. Beginne mit dem einen, das dir am meisten bedeutet.'
 };
+TXT.en.COACH={
+  focus:[
+    'Not everything matters today. The next useful step does.',
+    'This goal matters more than the others right now. Focus here.',
+    'One step today keeps your flower moving.',
+    'You don\'t have to do it all. Just the next thing.'
+  ],
+  lowEnergy:[
+    'Low energy is not a standstill. One micro step is enough today.',
+    'A micro step beats standing still.',
+    'Today it\'s enough to keep the flower alive.'
+  ],
+  risk2:'Your flower is still steady, but it starts fading tomorrow. Pick a micro step today.',
+  risk3:'Your flower is losing vitality. One small step brings it back.',
+  recover:'You are not back to zero. But your flower needs energy again.',
+  win:[
+    'Nice. Your cyberflower grew a little more.',
+    'Nice. You gave your goal energy today.',
+    'Your flower got fresh energy. You are closer than yesterday.'
+  ],
+  phaseUp:'New growth stage reached. Your flower is visibly changing.',
+  bloom:'Your cyberflower is in full bloom. You reached your goal.',
+  noTasks:'This goal has no open steps yet. Add one — small is fine.',
+  noGoals:'No goal planted yet. Start with the one that means the most to you.'
+};
+const COACH=new Proxy({},{get:(_,k)=>T().COACH[k]});
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 
 /* Tagesbotschaft: hängt an Risiko, Vitalität und letztem Check-in */
 function coachMessage(g){
   if(!g) return COACH.noGoals;
   const d=daysBetween(todayISO(),g.last_activity_date);
-  const ci=DB.checkins.filter(c=>c.date===todayISO()).pop();
+  const ci=DB.checkins.filter(c=>c.date===todayISO()&&!c.goal_id).pop();
   if(d>=3) return COACH.risk3;
   if(d===2) return COACH.risk2;
   if(g.vitality<40) return COACH.recover;
-  if(ci && (ci.energy<=2||ci.motivation<=2)) return pick(COACH.lowEnergy);
+  if(ci && ci.energy && ci.energy<=2) return pick(COACH.lowEnergy);
   return pick(COACH.focus);
 }
 
@@ -856,80 +947,398 @@ function vitalityTomorrow(g){
   return Math.max(0,base-(d-2)*5);
 }
 
-/* Vorgeschlagene erste Schritte je Lebensbereich (11.2) */
-const TASK_TEMPLATES={
-  'Gesundheit':[['Sportsachen bereitlegen',1],['15 Minuten Dehnübungen',2,'daily',30],
+/* Vorgeschlagene Schritte je Lebensbereich (11.2).
+   Aufbau: [Text, Punkte, Rhythmus, Anzahl] */
+TXT.de.TEMPLATES={
+  health:[['Sportsachen bereitlegen',1],['15 Minuten Dehnübungen',2,'daily',30],
     ['5 Minuten an die frische Luft',2],['20 Minuten spazieren gehen',4,'daily',30],
     ['Wöchentlich wiegen',3,'weekly',12],['Eine Woche Mahlzeiten notieren',8],
     ['Ernährungsplan für eine Woche erstellen',12],['Dreimal pro Woche trainieren',5,'weekly',12],
     ['Schlafroutine festlegen',14],['Einen Monat lang dranbleiben',25]],
-  'Lernen':[['Lernmaterial heraussuchen',2],['Fünf Vokabeln wiederholen',1,'daily',60],
+  learning:[['Lernmaterial heraussuchen',2],['Fünf Vokabeln wiederholen',1,'daily',60],
     ['15 Minuten am Stück lernen',3,'daily',30],['Lernzeiten in den Kalender eintragen',6],
     ['Eine Lektion abschließen',9],['Wöchentlich Hörverständnis üben',4,'weekly',12],
     ['Tandempartner suchen',12],['Ersten Test bestehen',20],['Kurs abschließen',40]],
-  'Finanzen':[['Kontoauszug ansehen',1,'weekly',12],['Ein Abo prüfen',2],['Ein Abo kündigen',5],
+  money:[['Kontoauszug ansehen',1,'weekly',12],['Ein Abo prüfen',2],['Ein Abo kündigen',5],
     ['Ausgaben täglich notieren',1,'daily',30],['Ausgaben eines Monats auflisten',14],
     ['Sparbetrag festlegen',8],['Dauerauftrag einrichten',10],['Drei Monate durchhalten',30]],
-  'Karriere':[['Aktuellen Stand aufschreiben',2],['Täglich 15 Minuten weiterarbeiten',2,'daily',30],
+  career:[['Aktuellen Stand aufschreiben',2],['Täglich 15 Minuten weiterarbeiten',2,'daily',30],
     ['Eine Person um Feedback bitten',5],['Lebenslauf aktualisieren',10],
     ['Wöchentlich einen Kontakt anschreiben',3,'weekly',8],
     ['Ein Gespräch führen',16],['Angebot oder Bewerbung fertigstellen',25]],
-  'Wohnen':[['Eine Schublade aufräumen',2],['Täglich 10 Minuten aufräumen',2,'daily',30],
+  home:[['Eine Schublade aufräumen',2],['Täglich 10 Minuten aufräumen',2,'daily',30],
     ['Raum für Raum Liste erstellen',6],['Einen Karton aussortieren',4],
     ['Material besorgen',9],['Eine Wand streichen',18],['Ersten Raum fertigstellen',30]],
-  'Kreativität':[['Täglich an neue Titel denken',2,'daily',60],['Zehn Minuten Ideen sammeln',2],
+  creative:[['Täglich an neue Titel denken',2,'daily',60],['Zehn Minuten Ideen sammeln',2],
     ['Arbeitsplatz vorbereiten',3],['Täglich eine Seite schreiben',3,'daily',30],
     ['Gliederung anlegen',8],['Ein Kapitel fertigstellen',16],
     ['Erste Fassung abschließen',40],['Feedback einholen',12]],
-  'Beziehungen':[['Eine Person heute anschreiben',1,'daily',30],['Ein Telefonat führen',3],
+  people:[['Eine Person heute anschreiben',1,'daily',30],['Ein Telefonat führen',3],
     ['Wöchentlich jemanden treffen',4,'weekly',12],['Treffen vorschlagen',4],
     ['Regelmäßigen Termin festlegen',12]],
-  'Persönlich':[['Fünf Minuten still sitzen',1,'daily',30],['Tagesrückblick schreiben',2,'daily',30],
+  personal:[['Fünf Minuten still sitzen',1,'daily',30],['Tagesrückblick schreiben',2,'daily',30],
     ['Eine Gewohnheit definieren',5],['Wöchentlicher Rückblick',4,'weekly',12],
     ['Eine Woche durchhalten',12],['Einen Monat durchhalten',25]]
 };
+TXT.en.TEMPLATES={
+  health:[['Lay out workout clothes',1],['15 minutes of stretching',2,'daily',30],
+    ['Step outside for 5 minutes',2],['Take a 20 minute walk',4,'daily',30],
+    ['Weigh in once a week',3,'weekly',12],['Track meals for one week',8],
+    ['Build a one week meal plan',12],['Work out three times a week',5,'weekly',12],
+    ['Set a bedtime routine',14],['Stick with it for a month',25]],
+  learning:[['Pick your study material',2],['Review five words',1,'daily',60],
+    ['Study 15 minutes straight',3,'daily',30],['Block study time on your calendar',6],
+    ['Finish one lesson',9],['Practice listening each week',4,'weekly',12],
+    ['Find a conversation partner',12],['Pass the first test',20],['Finish the course',40]],
+  money:[['Check your account',1,'weekly',12],['Review one subscription',2],['Cancel one subscription',5],
+    ['Log spending each day',1,'daily',30],['List a full month of spending',14],
+    ['Decide on a savings amount',8],['Set up an automatic transfer',10],['Keep it up for three months',30]],
+  career:[['Write down where you stand',2],['Work on it 15 minutes a day',2,'daily',30],
+    ['Ask one person for feedback',5],['Update your resume',10],
+    ['Reach out to one contact each week',3,'weekly',8],
+    ['Have one real conversation',16],['Finish the proposal or application',25]],
+  home:[['Clear out one drawer',2],['Tidy up 10 minutes a day',2,'daily',30],
+    ['Make a room by room list',6],['Sort through one box',4],
+    ['Buy the materials',9],['Paint one wall',18],['Finish the first room',30]],
+  creative:[['Think up new titles each day',2,'daily',60],['Brainstorm for ten minutes',2],
+    ['Set up your workspace',3],['Write one page a day',3,'daily',30],
+    ['Draft an outline',8],['Finish one chapter',16],
+    ['Complete the first draft',40],['Get feedback',12]],
+  people:[['Message one person today',1,'daily',30],['Make one phone call',3],
+    ['See someone once a week',4,'weekly',12],['Suggest a get-together',4],
+    ['Set a standing date',12]],
+  personal:[['Sit quietly for five minutes',1,'daily',30],['Write a short day review',2,'daily',30],
+    ['Define one habit',5],['Weekly reflection',4,'weekly',12],
+    ['Keep it up for a week',12],['Keep it up for a month',25]]
+};
+
 /* Beispieltexte passend zum Lebensbereich — ein Beispiel aus einem
    fremden Thema irritiert mehr, als es hilft. */
-const PLACEHOLDER={
-  'Gesundheit':'z.B. 15 Minuten Dehnübungen',
-  'Lernen':'z.B. Eine Lektion wiederholen',
-  'Finanzen':'z.B. Kontoauszug durchsehen',
-  'Karriere':'z.B. Ein Angebot schreiben',
-  'Wohnen':'z.B. Ein Regal aufbauen',
-  'Kreativität':'z.B. Eine Seite schreiben',
-  'Beziehungen':'z.B. Bei Anna melden',
-  'Persönlich':'z.B. Fünf Minuten still sitzen'
+TXT.de.PLACEHOLDER={
+  health:'z.B. 15 Minuten Dehnübungen', learning:'z.B. Eine Lektion wiederholen',
+  money:'z.B. Kontoauszug durchsehen', career:'z.B. Ein Angebot schreiben',
+  home:'z.B. Ein Regal aufbauen', creative:'z.B. Eine Seite schreiben',
+  people:'z.B. Bei Anna melden', personal:'z.B. Fünf Minuten still sitzen'
 };
-const ERFOLG_BEISPIEL={
-  'Gesundheit':'z.B. Ich bewege mich dreimal pro Woche 30 Minuten.',
-  'Lernen':'z.B. Ich bestehe die A2-Prüfung.',
-  'Finanzen':'z.B. Ich lege monatlich 200 Euro zurück.',
-  'Karriere':'z.B. Ich habe eine unterschriebene Zusage.',
-  'Wohnen':'z.B. Alle Räume sind gestrichen und eingerichtet.',
-  'Kreativität':'z.B. 500 verkaufte Exemplare und eine laufende Nachbestellung.',
-  'Beziehungen':'z.B. Ich treffe mich zweimal im Monat mit Freunden.',
-  'Persönlich':'z.B. Ich halte die Routine 30 Tage am Stück durch.'
+TXT.en.PLACEHOLDER={
+  health:'e.g. 15 minutes of stretching', learning:'e.g. Review one lesson',
+  money:'e.g. Go through the bank statement', career:'e.g. Write one proposal',
+  home:'e.g. Assemble the shelf', creative:'e.g. Write one page',
+  people:'e.g. Text Anna', personal:'e.g. Sit quietly for five minutes'
 };
-const beispielFuer=area=>PLACEHOLDER[area]||'z.B. Einen kleinen Schritt festlegen';
-
-/* Beispiele für Zielnamen — ebenfalls je Bereich */
-const ZIEL_BEISPIEL={
-  'Gesundheit':'z.B. Wieder regelmäßig bewegen',
-  'Lernen':'z.B. Spanisch A2 erreichen',
-  'Finanzen':'z.B. Finanzen ordnen',
-  'Karriere':'z.B. Neue Rolle finden',
-  'Wohnen':'z.B. Wohnung renovieren',
-  'Kreativität':'z.B. Kinderbuch vermarkten',
-  'Beziehungen':'z.B. Freundeskreis pflegen',
-  'Persönlich':'z.B. Eine tägliche Routine aufbauen'
+TXT.de.SUCCESS={
+  health:'z.B. Ich bewege mich dreimal pro Woche 30 Minuten.',
+  learning:'z.B. Ich bestehe die A2-Prüfung.',
+  money:'z.B. Ich lege monatlich 200 Euro zurück.',
+  career:'z.B. Ich habe eine unterschriebene Zusage.',
+  home:'z.B. Alle Räume sind gestrichen und eingerichtet.',
+  creative:'z.B. 500 verkaufte Exemplare und eine laufende Nachbestellung.',
+  people:'z.B. Ich treffe mich zweimal im Monat mit Freunden.',
+  personal:'z.B. Ich halte die Routine 30 Tage am Stück durch.'
 };
+TXT.en.SUCCESS={
+  health:'e.g. I move for 30 minutes, three times a week.',
+  learning:'e.g. I pass the A2 exam.',
+  money:'e.g. I set aside $200 every month.',
+  career:'e.g. I have a signed offer in hand.',
+  home:'e.g. Every room is painted and furnished.',
+  creative:'e.g. 500 copies sold and a reprint on the way.',
+  people:'e.g. I see friends twice a month.',
+  personal:'e.g. I keep the routine going for 30 days straight.'
+};
+TXT.de.GOALEX={
+  health:'z.B. Wieder regelmäßig bewegen', learning:'z.B. Spanisch A2 erreichen',
+  money:'z.B. Finanzen ordnen', career:'z.B. Neue Rolle finden',
+  home:'z.B. Wohnung renovieren', creative:'z.B. Kinderbuch vermarkten',
+  people:'z.B. Freundeskreis pflegen', personal:'z.B. Eine tägliche Routine aufbauen'
+};
+TXT.en.GOALEX={
+  health:'e.g. Get moving regularly again', learning:'e.g. Reach Spanish A2',
+  money:'e.g. Get my finances in order', career:'e.g. Land a new role',
+  home:'e.g. Renovate the apartment', creative:'e.g. Market my children\'s book',
+  people:'e.g. Keep my friendships alive', personal:'e.g. Build a daily routine'
+};
+const beispielFuer=area=>T().PLACEHOLDER[area]||T().PLACEHOLDER.personal;
+const erfolgFuer=area=>T().SUCCESS[area]||T().SUCCESS.personal;
+const zielBeispiel=area=>T().GOALEX[area]||T().GOALEX.personal;
 
 function suggestTasks(area){
-  return (TASK_TEMPLATES[area]||TASK_TEMPLATES['Persönlich'])
-    .map(([title,points,repeat,anzahl])=>({title,points,
-      repeat:REPEAT[repeat]?repeat:'once',
-      repeatN:REPEAT[repeat]?(anzahl||REPEAT[repeat].anzahl[0]):1}));
+  const q=T().TEMPLATES[area]||T().TEMPLATES.personal;
+  return q.map(([title,points,repeat,anzahl])=>({title,points,
+    repeat:REPEAT[repeat]?repeat:'once',
+    repeatN:REPEAT[repeat]?(anzahl||REPEAT[repeat].anzahl[0]):1}));
 }
+
+/* ==========================================================================
+   Beschriftungen der Oberfläche. W('schlüssel') liefert den Text in der
+   gerade eingestellten Sprache.
+   ========================================================================== */
+TXT.de.UI={
+  navFocus:'Fokus', navGarden:'Garten', navCheckin:'Check-in', navNew:'Ziel',
+  growth:'Wachstum', vitality:'Vitalität', vitShort:'Vit.',
+  greeting:'Guten Tag', appEmptyTitle:'Dein Garten ist noch leer',
+  plantFirst:'Erstes Ziel pflanzen', loadDemo:'Beispielziel laden',
+  primaryGoal:'Primärziel', dayFocus:'Tagesfokus', secondaryGoal:'Sekundärziel',
+  openGoal:'Ziel öffnen', coach:'Coach',
+  tomorrowWarn:'Ohne Schritt heute: Vitalität morgen',
+  whichAction:'Welche Aktion heute?',
+  tickOnlyWhenDone:'Abhaken erst, wenn du sie wirklich gemacht hast.',
+  mostEffective:'Wirksamste Aktion:',
+  addStep:'+ Schritt hinzufügen', newStep:'+ Neuer Schritt',
+  sizeSmall:'Klein', sizeNormal:'Normal', sizeBig:'Kraftvoll',
+  points:'Punkte', markDone:'Als erledigt abhaken',
+  goalsNeedCare:'Ziele, die Pflege brauchen',
+  daysNoStep:'Tage ohne Schritt',
+  garden:'Blumengarten', noGoalsYet:'Noch keine Ziele.', plantGoal:'Ziel pflanzen',
+  active:'aktiv', primaryShort:'Primär', bloomed:'Erblüht',
+  anotherGoal:'+ Weiteres Ziel', exportData:'Daten als Datei sichern',
+  goodToKnow:'Gut zu wissen',
+  privacyNote:'Alles bleibt auf diesem Gerät. Es werden keine Daten übertragen, '+
+    'es gibt kein Konto und keine Anmeldung. Auf dem Handy kannst du die Seite über '+
+    '„Zum Home-Bildschirm hinzufügen“ wie eine App öffnen.',
+  legend:'Legende',
+  legendText:'Leuchtende Blume: Ziel läuft gut · Knospe: kurz vor wichtigem Fortschritt · '+
+    'Hängende Blume: Ziel braucht Pflege · Verblassende Blume: länger nicht bearbeitet · '+
+    'Voll erblüht: Ziel erreicht.',
+  backGarden:'← Garten', makePrimary:'Zum Primärziel machen', isPrimary:'Ist Primärziel',
+  navBlock:'Navigation to Destination',
+  resultLbl:'Result — Was genau?', purposeLbl:'Purpose — Warum?', planLbl:'Aktion Plan',
+  open:'offen', openSteps:'offene Schritte', doneCountLbl:'erledigt',
+  ofPoints:'von', pointsWord:'Punkten',
+  targetDate:'Zieldatum:', priority:'Priorität', notSet:'offen',
+  lastActivity:'Letzte Aktivität:', today:'heute', yesterday:'gestern', daysAgo:'Tage her',
+  openToday:'Heute offen', stepBtn:'+ Schritt',
+  sortNote:'Sortiert nach Wirkung + Dringlichkeit − Schwierigkeit.',
+  allDoneToday:'Für heute ist alles geschafft. Morgen geht es weiter.',
+  doneTodayTitle:'Heute schon geschafft', comesBack:'Kommt morgen von selbst zurück.',
+  doneTitle:'Erledigt', manageGoal:'Ziel verwalten', editGoal:'Ziel anpassen',
+  pauseGoal:'Ziel pausieren', resumeGoal:'Ziel fortsetzen', deleteGoal:'Ziel löschen',
+  editStep:'Schritt bearbeiten', undoToday:'Heutige Ausführung zurücknehmen',
+  doneToday:'heute geschafft',
+  checkinTitle:'Tages-Check-in',
+  checkedInAlready:'Du hast heute eingecheckt. Du kannst alles ändern.',
+  checkinIntro:'Kurz einordnen, wo du heute stehst.',
+  noActiveGoals:'Noch keine aktiven Ziele.',
+  energyQ:'Wie viel Energie hast du heute?', moodQ:'Wie ist deine Stimmung?',
+  rateGoalsTitle:'Wie fühlt sich heute jedes Ziel an?',
+  rateGoalsHint:'1 heißt: heute schwer. 5 heißt: da habe ich Lust drauf. '+
+    'Danach siehst du, was heute am besten passt.',
+  grown:'gewachsen', stepsToday:'Schritt heute', stepsTodayPl:'Schritte heute',
+  nothingToday:'heute nichts offen',
+  bestToday:'Heute passt am besten', stepsReady:'Schritte stehen heute bereit.',
+  nothingOpenHere:'Hier steht heute nichts offen.',
+  yourCall:'Du entscheidest. Der Vorschlag ist nur ein Vorschlag.',
+  showStepsHere:'Schritte hier anzeigen',
+  rateFirst:'Bewerte deine Ziele oben, dann sage ich dir, was heute am besten passt.',
+  orPickGoal:'Oder direkt ein Ziel wählen',
+  sortedByRating:'Sortiert nach deiner heutigen Bewertung.',
+  notRated:'nicht bewertet', step:'Schritt', steps:'Schritte',
+  stepsIn:'Schritte in', otherGoal:'Anderes Ziel',
+  tapWhenDone:'Tippe einen Schritt an, wenn du ihn wirklich gemacht hast. Nichts wird automatisch abgehakt.',
+  noneThisSize:'In dieser Größe steht heute nichts an. Wähle eine andere Größe.',
+  allDoneHere:'Für heute ist hier alles geschafft.',
+  alreadyToday:'Heute schon geschafft:',
+  lastCheckins:'Letzte Check-ins', energy:'Energie', mood:'Stimmung',
+  goalsRated:'Ziel bewertet', goalsRatedPl:'Ziele bewertet',
+  newGoal:'Neues Ziel', adjustGoal:'Ziel anpassen', cancel:'Abbrechen',
+  next:'Weiter', back:'Zurück', plantIt:'Ziel pflanzen', saveChanges:'Änderungen speichern',
+  step1:'Schritt 1 — Result', step1q:'Was möchtest du konkret erreichen?',
+  goalName:'Zielname', areaLbl:'Lebensbereich — er bestimmt die Farbe deiner Blume',
+  step2:'Schritt 2 — Purpose', step2q:'Warum ist dieses Ziel für dich wichtig?',
+  purposePh:'Der Grund, der dich auch an schlechten Tagen trägt.',
+  purposeHint:'Das Warum ist der Teil, den du an Tagen mit wenig Energie brauchst.',
+  step3:'Schritt 3 — Messbarkeit', step3q:'Woran erkennst du, dass das Ziel erfüllt ist?',
+  whenBy:'Bis wann möchtest du das Ziel erreichen?',
+  step4:'Schritt 4 — Priorität', step4q:'Wie ordnet sich dieses Ziel ein?',
+  impQ:'Wie wichtig ist dir dieses Ziel?', urgQ:'Wie dringend ist es?',
+  effQ:'Wie stark verbessert es dein Leben?', resQ:'Wie hoch ist dein innerer Widerstand?',
+  resHint:'Hoher Widerstand senkt die Priorität — das ist Absicht. '+
+    'Ziele mit viel Widerstand brauchen erst kleinere Schritte.',
+  prioFormula:'Wichtigkeit + Dringlichkeit + Wirkung − Widerstand',
+  step5:'Schritt 5 — Aktion Plan', step5q:'Welche Schritte bringen dich diesem Ziel näher?',
+  alreadyHas:'Dieses Ziel hat bereits', stepsStay:'Schritte. Sie bleiben erhalten — hier kommt nur Neues dazu.',
+  noStepsYet:'Noch keine Schritte.',
+  addOwnStep:'Eigenen Schritt hinzufügen', changeStep:'Schritt ändern',
+  coachSuggestions:'Coach-Vorschläge', totalScope:'Gesamtumfang',
+  growthPoints:'Wachstumspunkte',
+  scopeHint:'Je mehr Punkte ein Ziel umfasst, desto langsamer wächst die Blume — '+
+    'und desto mehr Zwischenschritte trägt sie.',
+  needName:'Gib deinem Ziel zuerst einen Namen.',
+  needStep:'Mindestens ein Schritt wird gebraucht, damit die Blume wachsen kann.',
+  repeatLbl:'Wiederholung', onceHint:'Einmal abhaken, dann erledigt.',
+  howOften:'Wie oft insgesamt?', days:'Tage', weeks:'Wochen',
+  repeatHint1:'Einmal', repeatHint2:'abhakbar. Kommt',
+  nextDay:'am nächsten Tag', nextWeek:'in der nächsten Woche',
+  repeatHint3:'zurück, bis alle', repeatHint4:'geschafft sind.',
+  pointsLbl:'Wachstumspunkte',
+  pointsHint:'1 bis 3 für echte Zwischenschritte, 40 bis 50 nur für Schlüsselaufgaben.',
+  addStepTitle:'Schritt hinzufügen', toGoal:'Zu', inGoal:'In',
+  whatStep:'Was ist der Schritt?', add:'Hinzufügen',
+  stepText:'Text des Schritts', alreadyDoneTimes:'Bereits',
+  recalcNote:'× erledigt. Änderst du Punkte oder Anzahl, wird der Fortschritt des Ziels neu berechnet.',
+  saveStep:'Änderungen speichern', copyStep:'Als Kopie anlegen', deleteStep:'Schritt löschen',
+  deleteGoalQ:'Ziel löschen?',
+  deleteGoalWarn:'und alle zugehörigen Schritte werden entfernt. Das lässt sich nicht rückgängig machen.',
+  deleteForever:'Endgültig löschen', keepIt:'Behalten',
+  goalReached:'Ziel erreicht', started:'gestartet', continueBtn:'Weiter',
+  stepAdded:'Schritt hinzugefügt', stepChanged:'Schritt geändert', copyMade:'Kopie angelegt',
+  newPrimary:'Neues Primärziel gesetzt', planted:'Deine Cyberblume ist gepflanzt',
+  goalUpdated:'Ziel aktualisiert', demoPlanted:'Beispielziel gepflanzt',
+  undone:'Zurückgenommen', dataSaved:'Daten gesichert',
+  noSizeStep:'Für diese Größe gibt es noch keinen Schritt',
+  ofDone:'von', doneMorrow:'geschafft. Morgen weiter.',
+  saveBlocked:'Speichern nicht möglich. Daten gelten nur für diese Sitzung.',
+  copyFailed:'Sichern nicht möglich:', errCopied:'Fehlertext kopiert',
+  copyNotAllowed:'Kopieren nicht erlaubt', copyUnsupported:'Kopieren wird hier nicht unterstützt',
+  errTitle:'Da ist etwas schiefgelaufen',
+  errIntro:'Die App läuft weiter — deine Ziele sind gespeichert. Beim Schritt',
+  errIntro2:'ist ein Fehler aufgetreten.', errUnknown:'unbekannt',
+  backHome:'Zurück zum Start', copyError:'Fehlertext kopieren',
+  errRepeat:'Wenn das wiederholt passiert: Fehlertext kopieren und schicken.',
+  langName:'Deutsch', langOther:'English',
+  seriesTotal:'Diese Reihe zählt insgesamt',
+  seriesCalc:'Punkte',
+  seriesWarnTitle:'Achtung: sehr große Reihe',
+  seriesWarn:'Ein wiederkehrender Schritt sollte klein sein. Bei hohen Punkten mal vielen '+
+    'Wiederholungen wird das Ziel so groß, dass die Blume kaum noch wächst. '+
+    'Für tägliche Schritte sind 1 bis 3 Punkte gedacht.',
+  shareOfGoal:'Anteil an diesem Ziel',
+  stepDominates:'Dieser Schritt allein macht',
+  stepDominates2:'des Ziels aus. Weniger Punkte oder weniger Wiederholungen lassen die Blume sichtbarer wachsen.'
+};
+TXT.en.UI={
+  navFocus:'Focus', navGarden:'Garden', navCheckin:'Check-in', navNew:'Goal',
+  growth:'Growth', vitality:'Vitality', vitShort:'Vit.',
+  greeting:'Hello', appEmptyTitle:'Your garden is still empty',
+  plantFirst:'Plant your first goal', loadDemo:'Load an example goal',
+  primaryGoal:'Primary goal', dayFocus:'Today\'s focus', secondaryGoal:'Secondary goal',
+  openGoal:'Open goal', coach:'Coach',
+  tomorrowWarn:'No step today means vitality drops to',
+  whichAction:'Which action today?',
+  tickOnlyWhenDone:'Only check it off once you have actually done it.',
+  mostEffective:'Most effective action:',
+  addStep:'+ Add a step', newStep:'+ New step',
+  sizeSmall:'Small', sizeNormal:'Regular', sizeBig:'Powerful',
+  points:'points', markDone:'Mark as done',
+  goalsNeedCare:'Goals that need care',
+  daysNoStep:'days without a step',
+  garden:'Flower garden', noGoalsYet:'No goals yet.', plantGoal:'Plant a goal',
+  active:'active', primaryShort:'Primary', bloomed:'In bloom',
+  anotherGoal:'+ Another goal', exportData:'Save data to a file',
+  goodToKnow:'Good to know',
+  privacyNote:'Everything stays on this device. No data is sent anywhere, '+
+    'there is no account and no sign-up. On a phone you can use '+
+    '"Add to Home Screen" to open it like an app.',
+  legend:'Legend',
+  legendText:'Glowing flower: going well · Bud: close to real progress · '+
+    'Drooping flower: needs care · Fading flower: untouched for a while · '+
+    'Full bloom: goal reached.',
+  backGarden:'← Garden', makePrimary:'Make this my primary goal', isPrimary:'This is your primary goal',
+  navBlock:'Navigation to Destination',
+  resultLbl:'Result — what exactly?', purposeLbl:'Purpose — why?', planLbl:'Action Plan',
+  open:'open', openSteps:'open steps', doneCountLbl:'done',
+  ofPoints:'of', pointsWord:'points',
+  targetDate:'Target date:', priority:'Priority', notSet:'not set yet',
+  lastActivity:'Last activity:', today:'today', yesterday:'yesterday', daysAgo:'days ago',
+  openToday:'Open today', stepBtn:'+ Step',
+  sortNote:'Sorted by impact + urgency − difficulty.',
+  allDoneToday:'Everything is done for today. More tomorrow.',
+  doneTodayTitle:'Already done today', comesBack:'It comes back on its own tomorrow.',
+  doneTitle:'Completed', manageGoal:'Manage goal', editGoal:'Edit goal',
+  pauseGoal:'Pause goal', resumeGoal:'Resume goal', deleteGoal:'Delete goal',
+  editStep:'Edit step', undoToday:'Undo today\'s entry',
+  doneToday:'done today',
+  checkinTitle:'Daily check-in',
+  checkedInAlready:'You checked in today. You can change anything.',
+  checkinIntro:'A quick read on where you are today.',
+  noActiveGoals:'No active goals yet.',
+  energyQ:'How much energy do you have today?', moodQ:'How is your mood?',
+  rateGoalsTitle:'How does each goal feel today?',
+  rateGoalsHint:'1 means: hard today. 5 means: I actually want to do this. '+
+    'Then you will see what fits best today.',
+  grown:'grown', stepsToday:'step today', stepsTodayPl:'steps today',
+  nothingToday:'nothing open today',
+  bestToday:'Best fit today', stepsReady:'steps are ready today.',
+  nothingOpenHere:'Nothing is open here today.',
+  yourCall:'Your call. The suggestion is only a suggestion.',
+  showStepsHere:'Show steps for this goal',
+  rateFirst:'Rate your goals above and I will tell you what fits best today.',
+  orPickGoal:'Or pick a goal directly',
+  sortedByRating:'Sorted by how you rated them today.',
+  notRated:'not rated', step:'step', steps:'steps',
+  stepsIn:'Steps in', otherGoal:'Another goal',
+  tapWhenDone:'Tap a step once you have actually done it. Nothing is checked off automatically.',
+  noneThisSize:'Nothing of this size is open today. Try another size.',
+  allDoneHere:'Everything here is done for today.',
+  alreadyToday:'Already done today:',
+  lastCheckins:'Recent check-ins', energy:'Energy', mood:'Mood',
+  goalsRated:'goal rated', goalsRatedPl:'goals rated',
+  newGoal:'New goal', adjustGoal:'Edit goal', cancel:'Cancel',
+  next:'Next', back:'Back', plantIt:'Plant this goal', saveChanges:'Save changes',
+  step1:'Step 1 — Result', step1q:'What exactly do you want to achieve?',
+  goalName:'Goal name', areaLbl:'Life area — it sets the color of your flower',
+  step2:'Step 2 — Purpose', step2q:'Why does this goal matter to you?',
+  purposePh:'The reason that carries you on the bad days too.',
+  purposeHint:'The why is the part you need on low-energy days.',
+  step3:'Step 3 — Measurable', step3q:'How will you know the goal is met?',
+  whenBy:'By when do you want to reach it?',
+  step4:'Step 4 — Priority', step4q:'Where does this goal sit?',
+  impQ:'How important is this goal to you?', urgQ:'How urgent is it?',
+  effQ:'How much would it improve your life?', resQ:'How much inner resistance do you feel?',
+  resHint:'High resistance lowers the priority — that is on purpose. '+
+    'Goals with a lot of resistance need smaller steps first.',
+  prioFormula:'Importance + urgency + impact − resistance',
+  step5:'Step 5 — Action Plan', step5q:'Which steps move you toward this goal?',
+  alreadyHas:'This goal already has', stepsStay:'steps. They stay — this only adds new ones.',
+  noStepsYet:'No steps yet.',
+  addOwnStep:'Add your own step', changeStep:'Change step',
+  coachSuggestions:'Coach suggestions', totalScope:'Total scope',
+  growthPoints:'growth points',
+  scopeHint:'The more points a goal holds, the slower the flower grows — '+
+    'and the more small steps it carries.',
+  needName:'Give your goal a name first.',
+  needStep:'At least one step is needed for the flower to grow.',
+  repeatLbl:'Repeat', onceHint:'Check it off once, then it is done.',
+  howOften:'How many times in total?', days:'days', weeks:'weeks',
+  repeatHint1:'Can be checked off once', repeatHint2:'. It returns',
+  nextDay:'the next day', nextWeek:'the next week',
+  repeatHint3:'until all', repeatHint4:'are done.',
+  pointsLbl:'Growth points',
+  pointsHint:'1 to 3 for real in-between steps, 40 to 50 only for key tasks.',
+  addStepTitle:'Add a step', toGoal:'To', inGoal:'In',
+  whatStep:'What is the step?', add:'Add',
+  stepText:'Step text', alreadyDoneTimes:'Done',
+  recalcNote:'× so far. Changing points or count recalculates the goal\'s progress.',
+  saveStep:'Save changes', copyStep:'Save as a copy', deleteStep:'Delete step',
+  deleteGoalQ:'Delete this goal?',
+  deleteGoalWarn:'and all its steps will be removed. This cannot be undone.',
+  deleteForever:'Delete permanently', keepIt:'Keep it',
+  goalReached:'Goal reached', started:'started', continueBtn:'Continue',
+  stepAdded:'Step added', stepChanged:'Step updated', copyMade:'Copy created',
+  newPrimary:'New primary goal set', planted:'Your cyberflower is planted',
+  goalUpdated:'Goal updated', demoPlanted:'Example goal planted',
+  undone:'Undone', dataSaved:'Data saved',
+  noSizeStep:'There is no step of that size yet',
+  ofDone:'of', doneMorrow:'done. More tomorrow.',
+  saveBlocked:'Cannot save. Data will only last for this session.',
+  copyFailed:'Could not save:', errCopied:'Error text copied',
+  copyNotAllowed:'Copying was blocked', copyUnsupported:'Copying is not supported here',
+  errTitle:'Something went wrong',
+  errIntro:'The app is still running — your goals are saved. An error occurred during',
+  errIntro2:'.', errUnknown:'unknown',
+  backHome:'Back to start', copyError:'Copy error text',
+  errRepeat:'If this keeps happening: copy the error text and send it.',
+  langName:'English', langOther:'Deutsch',
+  seriesTotal:'This series counts',
+  seriesCalc:'points in total',
+  seriesWarnTitle:'Careful: very large series',
+  seriesWarn:'A recurring step should be small. High points times many repetitions make the goal '+
+    'so large that the flower barely grows. Daily steps are meant to be 1 to 3 points.',
+  shareOfGoal:'Share of this goal',
+  stepDominates:'This one step is',
+  stepDominates2:'of the whole goal. Fewer points or fewer repetitions let the flower grow visibly.'
+};
+const W=k=>{const v=T().UI[k]; return v==null?k:v;};
 
 /* ==========================================================================
    UI — Router und Hilfsfunktionen
@@ -968,11 +1377,19 @@ const CHECK='<svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg>';
 const PENCIL='<svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 
 function renderNav(){
-  const items=[['dash','Fokus','dash'],['garden','Garten','garden'],
-               ['checkin','Check-in','checkin'],['new','Ziel','plus']];
+  const items=[['dash',W('navFocus'),'dash'],['garden',W('navGarden'),'garden'],
+               ['checkin',W('navCheckin'),'checkin'],['new',W('navNew'),'plus']];
   $('nav').innerHTML=items.map(([v,label,ic])=>
     `<button class="tab ${VIEW.name===v?'on':''}" data-go="${v}">${ICON[ic]}<span>${label}</span></button>`
   ).join('');
+}
+
+/* Sprachumschalter — zwei kleine Knöpfe, die aktuelle Sprache ist hervorgehoben */
+function langSwitch(){
+  return `<div class="langsw" role="group" aria-label="Sprache / Language">
+    ${['de','en'].map(l=>`<button class="${LANG===l?'on':''}" data-lang="${l}"
+      aria-pressed="${LANG===l}">${l==='de'?'DE':'EN'}</button>`).join('')}
+  </div>`;
 }
 
 /* Fortschritts- und Vitalitätsblock */
@@ -980,14 +1397,14 @@ function statsBlock(g){
   return `<div class="col" style="gap:9px">
     <div>
       <div class="row between small" style="margin-bottom:4px">
-        <span class="mut">Wachstum</span>
+        <span class="mut">${W('growth')}</span>
         <span style="color:var(--grow);font-weight:700">${Math.round(g.progress_percent)}%</span>
       </div>
       <div class="bar g"><i style="width:${g.progress_percent}%"></i></div>
     </div>
     <div>
       <div class="row between small" style="margin-bottom:4px">
-        <span class="mut">Vitalität</span>
+        <span class="mut">${W('vitality')}</span>
         <span style="color:var(--vit);font-weight:700">${Math.round(g.vitality)}%</span>
       </div>
       <div class="bar v"><i style="width:${g.vitality}%"></i></div>
@@ -1004,17 +1421,17 @@ function stateChip(g){
    ========================================================================== */
 function viewDash(){
   const g=getDailyTopGoal();
-  const greetName=DB.name?esc(DB.name):'Willkommen';
+  const greetName=DB.name?esc(DB.name):'';
 
   if(!g){
     return `<div class="row between" style="margin-bottom:18px">
         <h1>BloomGoal Coach</h1></div>
       <div class="card center">
-        <div style="opacity:.5">${flowerSVG({flower_phase:1,vitality:60,life_area:'Persönlich'},150)}</div>
-        <h2 class="mt">Dein Garten ist noch leer</h2>
+        <div style="opacity:.5">${flowerSVG({flower_phase:1,vitality:60,life_area:'personal'},150)}</div>
+        <h2 class="mt">${W('appEmptyTitle')}</h2>
         <p class="mut small mt">${COACH.noGoals}</p>
-        <button class="btn pri mt" data-go="new">Erstes Ziel pflanzen</button>
-        <button class="btn gh sm mt" data-demo="1">Beispielziel laden</button>
+        <button class="btn pri mt" data-go="new">${W('plantFirst')}</button>
+        <button class="btn gh sm mt" data-demo="1">${W('loadDemo')}</button>
       </div>`;
   }
 
@@ -1026,54 +1443,54 @@ function viewDash(){
   let optionHTML='';
   const optRow=(t,label,accent)=>t?`
     <div class="task" style="border-color:${accent}">
-      <button class="tick" data-toggle="${t.task_id}" aria-label="Als erledigt abhaken">${CHECK}</button>
+      <button class="tick" data-toggle="${t.task_id}" aria-label="${W('markDone')}">${CHECK}</button>
       <button class="grow" style="text-align:left" data-toggle="${t.task_id}">
         <span class="chip ${accent==='var(--line)'?'':'grow-c'}" style="margin-bottom:4px">${label}</span>
         <span class="tt" style="display:block">${esc(t.title)}</span>
-        <span class="small mut" style="display:block">+${t.points} Punkte · +${TASK_TYPE[typeOf(t)].vitality} Vitalität${
-          repeatOf(t)==='once'?'':' · '+REPEAT[repeatOf(t)].kurz+' '+doneCount(t)+'/'+repeatTotal(t)}</span>
+        <span class="small mut" style="display:block">+${t.points} ${W('points')} · +${TASK_TYPE[typeOf(t)].vitality} ${W('vitality')}${
+          repeatOf(t)==='once'?'':' · '+repShort(repeatOf(t))+' '+doneCount(t)+'/'+repeatTotal(t)}</span>
       </button>
     </div>`:'';
-  optionHTML = optRow(opts.small,'Klein','var(--line)')
-             + optRow(opts.normal,'Normal','rgba(61,250,160,.35)')
-             + optRow(opts.big,'Kraftvoll','rgba(255,209,102,.4)');
+  optionHTML = optRow(opts.small,W('sizeSmall'),'var(--line)')
+             + optRow(opts.normal,W('sizeNormal'),'rgba(61,250,160,.35)')
+             + optRow(opts.big,W('sizeBig'),'rgba(255,209,102,.4)');
 
   return `
   <div class="row between" style="margin-bottom:16px">
-    <div><h1>Guten Tag${DB.name?', '+greetName:''}</h1>
-      <p class="small mut">${new Date().toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'})}</p></div>
+    <div><h1>${W('greeting')}${DB.name?', '+greetName:''}</h1>
+      <p class="small mut">${new Date().toLocaleDateString(locale(),{weekday:'long',day:'numeric',month:'long'})}</p></div>
   </div>
 
   <div class="card glow center">
     <div class="row between" style="margin-bottom:6px">
-      <span class="chip ${g.is_primary?'pri-c':'grow-c'}">${g.is_primary?'Primärziel':'Tagesfokus'}</span>
+      <span class="chip ${g.is_primary?'pri-c':'grow-c'}">${g.is_primary?W('primaryGoal'):W('dayFocus')}</span>
       ${stateChip(g)}
     </div>
     <div class="pop">${flowerSVG(g,200)}</div>
     <h2 style="margin-top:6px">${esc(g.title)}</h2>
     <p class="small mut" style="margin-top:3px">${PHASE_LABEL[g.flower_phase]}</p>
     <div class="mt">${statsBlock(g)}</div>
-    <button class="btn gh sm mt" data-goal="${g.goal_id}">Ziel öffnen</button>
+    <button class="btn gh sm mt" data-goal="${g.goal_id}">${W('openGoal')}</button>
   </div>
 
   <div class="bubble" style="margin-bottom:14px">
-    <b>Coach:</b> ${coachMessage(g)}
-    ${vt<g.vitality?`<br><span class="small mut">Ohne Schritt heute: Vitalität morgen ${Math.round(vt)}%.</span>`:''}
+    <b>${W('coach')}:</b> ${coachMessage(g)}
+    ${vt<g.vitality?`<br><span class="small mut">${W('tomorrowWarn')} ${Math.round(vt)}%.</span>`:''}
   </div>
 
   <div class="card">
-    <h3 style="margin-bottom:4px">Welche Aktion heute?</h3>
-    <p class="small mut" style="margin-bottom:10px">Abhaken erst, wenn du sie wirklich gemacht hast.</p>
-    ${best?`<p class="small mut" style="margin-bottom:10px">Wirksamste Aktion: <b style="color:var(--txt)">${esc(best.title)}</b></p>`:''}
+    <h3 style="margin-bottom:4px">${W('whichAction')}</h3>
+    <p class="small mut" style="margin-bottom:10px">${W('tickOnlyWhenDone')}</p>
+    ${best?`<p class="small mut" style="margin-bottom:10px">${W('mostEffective')} <b style="color:var(--txt)">${esc(best.title)}</b></p>`:''}
     ${optionHTML||`<p class="small mut">${COACH.noTasks}</p>`}
-    <button class="btn sm gh mt" style="width:100%" data-addtask="${g.goal_id}">+ Schritt hinzufügen</button>
+    <button class="btn sm gh mt" style="width:100%" data-addtask="${g.goal_id}">${W('addStep')}</button>
   </div>
 
   ${risk.length?`<div class="card">
-    <h3 style="margin-bottom:10px">Ziele, die Pflege brauchen</h3>
+    <h3 style="margin-bottom:10px">${W('goalsNeedCare')}</h3>
     ${risk.map(x=>`<button class="row between" style="width:100%;text-align:left;padding:9px 0" data-goal="${x.g.goal_id}">
       <span class="grow trunc">${esc(x.g.title)}</span>
-      <span class="chip ${x.d>=3?'warn':''}">${x.d} Tage ohne Schritt</span>
+      <span class="chip ${x.d>=3?'warn':''}">${x.d} ${W('daysNoStep')}</span>
     </button>`).join('')}
   </div>`:''}
   `;
@@ -1083,8 +1500,8 @@ function viewDash(){
    VIEW: Blumengarten (8.5)
    ========================================================================== */
 function viewGarden(){
-  if(!DB.goals.length) return `<h1>Blumengarten</h1>
-    <div class="empty">Noch keine Ziele.<br><button class="btn pri mt" data-go="new">Ziel pflanzen</button></div>`;
+  if(!DB.goals.length) return `<h1>${W('garden')}</h1>
+    <div class="empty">${W('noGoalsYet')}<br><button class="btn pri mt" data-go="new">${W('plantGoal')}</button></div>`;
 
   const sorted=DB.goals.slice().sort((a,b)=>
     (b.is_primary?1:0)-(a.is_primary?1:0) ||
@@ -1092,33 +1509,29 @@ function viewGarden(){
     calculateGoalPriority(b)-calculateGoalPriority(a));
 
   return `<div class="row between" style="margin-bottom:14px">
-      <h1>Blumengarten</h1>
-      <span class="chip">${activeGoals().length} aktiv</span>
+      <h1>${W('garden')}</h1>
+      <span class="chip">${activeGoals().length} ${W('active')}</span>
     </div>
     <div class="garden">
       ${sorted.map(g=>`
         <button class="plot ${g.is_primary?'primary':''}" data-goal="${g.goal_id}">
-          ${g.is_primary?'<span class="chip pri-c" style="position:absolute;top:8px;left:8px;font-size:10px;padding:2px 7px">Primär</span>':''}
-          ${g.status==='completed'?'<span class="chip win-c" style="position:absolute;top:8px;right:8px;font-size:10px;padding:2px 7px">Erblüht</span>':''}
+          ${g.is_primary?`<span class="chip pri-c" style="position:absolute;top:8px;left:8px;font-size:10px;padding:2px 7px">${W('primaryShort')}</span>`:''}
+          ${g.status==='completed'?`<span class="chip win-c" style="position:absolute;top:8px;right:8px;font-size:10px;padding:2px 7px">${W('bloomed')}</span>`:''}
           ${flowerSVG(g,110)}
           <div class="nm trunc">${esc(g.title)}</div>
-          <div class="st">${Math.round(g.progress_percent)}% · Vit. ${Math.round(g.vitality)}%</div>
+          <div class="st">${Math.round(g.progress_percent)}% · ${W('vitShort')} ${Math.round(g.vitality)}%</div>
           <div class="bar g" style="margin-top:6px"><i style="width:${g.progress_percent}%"></i></div>
         </button>`).join('')}
     </div>
-    <button class="btn gh mt" data-go="new">+ Weiteres Ziel</button>
-    <button class="btn sm gh mt" style="width:100%" data-export="1">Daten als Datei sichern</button>
+    <button class="btn gh mt" data-go="new">${W('anotherGoal')}</button>
+    <button class="btn sm gh mt" style="width:100%" data-export="1">${W('exportData')}</button>
     <div class="card mt">
-      <h3 style="margin-bottom:8px">Gut zu wissen</h3>
-      <p class="small mut">Alles bleibt auf diesem Gerät. Es werden keine Daten übertragen,
-        es gibt kein Konto und keine Anmeldung. Auf dem Handy kannst du die Seite über
-        „Zum Home-Bildschirm hinzufügen“ wie eine App öffnen.</p>
+      <h3 style="margin-bottom:8px">${W('goodToKnow')}</h3>
+      <p class="small mut">${W('privacyNote')}</p>
     </div>
     <div class="card">
-      <h3 style="margin-bottom:8px">Legende</h3>
-      <p class="small mut">Leuchtende Blume: Ziel läuft gut · Knospe: kurz vor wichtigem Fortschritt ·
-      Hängende Blume: Ziel braucht Pflege · Verblassende Blume: länger nicht bearbeitet ·
-      Voll erblüht: Ziel erreicht.</p>
+      <h3 style="margin-bottom:8px">${W('legend')}</h3>
+      <p class="small mut">${W('legendText')}</p>
     </div>`;
 }
 
@@ -1139,88 +1552,91 @@ function viewGoal(id){
   const map=t=>{
     const r=repeatOf(t), ganz=doneCount(t)>=repeatTotal(t), heute=doneToday(t);
     const reihe = r==='once' ? '' :
-      ` · ${REPEAT[r].kurz} ${doneCount(t)} von ${repeatTotal(t)}`;
+      ` · ${repShort(r)} ${doneCount(t)} ${W('ofDone')} ${repeatTotal(t)}`
+      + ` · ${t.points}×${repeatTotal(t)} = ${taskTotalPoints(t)}`;
+    const anteil = g.total_points ? Math.round(taskTotalPoints(t)/g.total_points*100) : 0;
     return `<div class="task ${ganz?'done':''} ${heute?'heute':''}">
       <button class="tick ${ganz||heute?'on':''}" data-toggle="${t.task_id}"
-        aria-label="${heute?'Heutige Ausführung zurücknehmen':'Als erledigt markieren'}">${CHECK}</button>
+        aria-label="${heute?W('undoToday'):W('markDone')}">${CHECK}</button>
       <button class="grow" style="text-align:left" data-edittask="${t.task_id}">
         <span class="tt">${esc(t.title)}</span>
         <span class="small mut" style="display:block;margin-top:2px">
-          ${t.points} Punkte${reihe}${heute?' · heute geschafft':''}
+          ${t.points} ${W('points')}${reihe}${heute?' · '+W('doneToday'):''}
+          ${anteil>=40?`<b style="color:var(--win)"> · ${anteil}% ${W('shareOfGoal').toLowerCase()}</b>`:''}
         </span>
         ${r==='once'?'':`<span class="bar g" style="margin-top:6px;height:5px">
           <i style="width:${Math.round(doneCount(t)/repeatTotal(t)*100)}%"></i></span>`}
       </button>
       <button class="btn sm gh" style="padding:6px 9px;font-size:13px"
-        data-edittask="${t.task_id}" aria-label="Schritt bearbeiten">${PENCIL}</button>
+        data-edittask="${t.task_id}" aria-label="${W('editStep')}">${PENCIL}</button>
     </div>`;
   };
 
   return `
-  <button class="btn sm gh" data-go="garden" style="margin-bottom:12px">← Garten</button>
+  <button class="btn sm gh" data-go="garden" style="margin-bottom:12px">${W('backGarden')}</button>
 
   <div class="card center ${g.is_primary?'glow':''}">
     <div class="row between" style="margin-bottom:4px">
-      ${g.is_primary?'<span class="chip pri-c">Primärziel</span>':'<span class="chip">Sekundärziel</span>'}
+      ${g.is_primary?`<span class="chip pri-c">${W('primaryGoal')}</span>`:`<span class="chip">${W('secondaryGoal')}</span>`}
       ${stateChip(g)}
     </div>
     ${flowerSVG(g,190)}
     <h1 style="margin-top:6px">${esc(g.title)}</h1>
-    <p class="small mut">${PHASE_LABEL[g.flower_phase]} · ${esc(g.life_area)}</p>
+    <p class="small mut">${PHASE_LABEL[g.flower_phase]} · ${esc(areaLabel(g.life_area))}</p>
     <div class="mt">${statsBlock(g)}</div>
     <div class="row mt" style="gap:8px">
       <button class="btn sm ${g.is_primary?'gh':'coach'}" style="flex:1" data-primary="${g.goal_id}"
-        ${g.is_primary?'disabled':''}>${g.is_primary?'Ist Primärziel':'Zum Primärziel machen'}</button>
+        ${g.is_primary?'disabled':''}>${g.is_primary?W('isPrimary'):W('makePrimary')}</button>
     </div>
   </div>
 
   <div class="card">
-    <h3 style="margin-bottom:12px">Navigation to Destination</h3>
+    <h3 style="margin-bottom:12px">${W('navBlock')}</h3>
     <div class="col" style="gap:12px">
-      <div class="zk"><div class="lbl">Result — Was genau?</div>
-        <div class="val">${esc(g.success_criteria)||'<span class="mut">offen</span>'}</div></div>
-      <div class="zk"><div class="lbl">Purpose — Warum?</div>
-        <div class="val">${esc(g.purpose)||'<span class="mut">offen</span>'}</div></div>
-      <div class="zk"><div class="lbl">Aktion Plan</div>
-        <div class="val">${open.length} offene Schritte · ${done.length} erledigt ·
-          ${g.completed_points} von ${g.total_points} Punkten</div></div>
+      <div class="zk"><div class="lbl">${W('resultLbl')}</div>
+        <div class="val">${esc(g.success_criteria)||`<span class="mut">${W('notSet')}</span>`}</div></div>
+      <div class="zk"><div class="lbl">${W('purposeLbl')}</div>
+        <div class="val">${esc(g.purpose)||`<span class="mut">${W('notSet')}</span>`}</div></div>
+      <div class="zk"><div class="lbl">${W('planLbl')}</div>
+        <div class="val">${open.length} ${W('openSteps')} · ${done.length} ${W('doneCountLbl')} ·
+          ${g.completed_points} ${W('ofPoints')} ${g.total_points} ${W('pointsWord')}</div></div>
     </div>
     <div class="row between small mut mt">
-      <span>Zieldatum: ${g.target_date?new Date(g.target_date).toLocaleDateString('de-DE'):'—'}</span>
-      <span>Priorität ${calculateGoalPriority(g)}</span>
+      <span>${W('targetDate')} ${g.target_date?new Date(g.target_date).toLocaleDateString(locale()):'—'}</span>
+      <span>${W('priority')} ${calculateGoalPriority(g)}</span>
     </div>
-    <p class="small mut" style="margin-top:6px">Letzte Aktivität:
-      ${d===0?'heute':(d===1?'gestern':d+' Tage her')}</p>
+    <p class="small mut" style="margin-top:6px">${W('lastActivity')}
+      ${d===0?W('today'):(d===1?W('yesterday'):d+' '+W('daysAgo'))}</p>
   </div>
 
   <div class="card">
     <div class="row between" style="margin-bottom:12px">
-      <h3>Heute offen (${open.length})</h3>
-      <button class="btn sm" data-addtask="${g.goal_id}">+ Schritt</button>
+      <h3>${W('openToday')} (${open.length})</h3>
+      <button class="btn sm" data-addtask="${g.goal_id}">${W('stepBtn')}</button>
     </div>
     ${open.length?open.map(map).join(''):`<p class="small mut">${
-      laeuft.length?'Für heute ist alles geschafft. Morgen geht es weiter.':COACH.noTasks}</p>`}
-    ${open.length?'<p class="small mut" style="margin-top:8px">Sortiert nach Wirkung + Dringlichkeit − Schwierigkeit.</p>':''}
+      laeuft.length?W('allDoneToday'):COACH.noTasks}</p>`}
+    ${open.length?`<p class="small mut" style="margin-top:8px">${W('sortNote')}</p>`:''}
   </div>
 
   ${laeuft.length?`<div class="card">
-    <h3 style="margin-bottom:12px">Heute schon geschafft (${laeuft.length})</h3>
+    <h3 style="margin-bottom:12px">${W('doneTodayTitle')} (${laeuft.length})</h3>
     ${laeuft.map(map).join('')}
-    <p class="small mut" style="margin-top:8px">Kommt morgen von selbst zurück.</p>
+    <p class="small mut" style="margin-top:8px">${W('comesBack')}</p>
   </div>`:''}
 
   ${done.length?`<div class="card">
-    <h3 style="margin-bottom:12px">Erledigt (${done.length})</h3>
+    <h3 style="margin-bottom:12px">${W('doneTitle')} (${done.length})</h3>
     ${done.slice(0,12).map(map).join('')}
   </div>`:''}
 
   <div class="card">
-    <h3 style="margin-bottom:10px">Ziel verwalten</h3>
+    <h3 style="margin-bottom:10px">${W('manageGoal')}</h3>
     <div class="col">
-      <button class="btn sm gh" style="width:100%" data-editgoal="${g.goal_id}">Ziel anpassen</button>
+      <button class="btn sm gh" style="width:100%" data-editgoal="${g.goal_id}">${W('editGoal')}</button>
       <button class="btn sm gh" style="width:100%" data-pause="${g.goal_id}">
-        ${g.status==='paused'?'Ziel fortsetzen':'Ziel pausieren'}</button>
-      <button class="btn sm danger" style="width:100%" data-delgoal="${g.goal_id}">Ziel löschen</button>
+        ${g.status==='paused'?W('resumeGoal'):W('pauseGoal')}</button>
+      <button class="btn sm danger" style="width:100%" data-delgoal="${g.goal_id}">${W('deleteGoal')}</button>
     </div>
   </div>`;
 }
@@ -1271,16 +1687,22 @@ function goalDayScore(g){
 /* Warum steht dieses Ziel oben? In einem Satz erklärbar. */
 function dayScoreGrund(g,alle){
   const m=goalMood(g.goal_id);
-  if(!openTasks(g.goal_id).length) return 'Hier steht heute nichts offen.';
-  if(!m) return 'Noch nicht bewertet — die Reihenfolge folgt der Zielpriorität.';
+  const de=LANG==='de';
+  if(!openTasks(g.goal_id).length) return W('nothingOpenHere');
+  if(!m) return de?'Noch nicht bewertet — die Reihenfolge folgt der Zielpriorität.'
+                 :'Not rated yet — the order follows goal priority.';
   const gleich=alle.filter(x=>goalMood(x.goal_id)===m && openTasks(x.goal_id).length);
   if(gleich.length>1){
     const d=daysBetween(todayISO(),g.last_activity_date);
-    if(d>=2) return 'Von deinen mit '+m+' bewerteten Zielen wartet dieses am längsten ('+d+' Tage).';
-    if(g.is_primary) return 'Von deinen mit '+m+' bewerteten Zielen ist dies dein Primärziel.';
-    return 'Von deinen mit '+m+' bewerteten Zielen hat dieses die höhere Zielpriorität.';
+    if(d>=2) return de?'Von deinen mit '+m+' bewerteten Zielen wartet dieses am längsten ('+d+' Tage).'
+                     :'Of the goals you rated '+m+', this one has waited longest ('+d+' days).';
+    if(g.is_primary) return de?'Von deinen mit '+m+' bewerteten Zielen ist dies dein Primärziel.'
+                             :'Of the goals you rated '+m+', this is your primary goal.';
+    return de?'Von deinen mit '+m+' bewerteten Zielen hat dieses die höhere Zielpriorität.'
+            :'Of the goals you rated '+m+', this one has the higher goal priority.';
   }
-  return 'Du hast es heute mit '+m+' von 5 bewertet — das ist dein höchster Wert.';
+  return de?'Du hast es heute mit '+m+' von 5 bewertet — das ist dein höchster Wert.'
+          :'You rated it '+m+' out of 5 today — your highest rating.';
 }
 function goalsByDay(){
   return activeGoals().slice().sort((a,b)=>goalDayScore(b)-goalDayScore(a));
@@ -1294,11 +1716,14 @@ function goalsStable(){
 
 /* Größenfilter für die Schrittliste */
 const GROESSEN={
-  alle:  {label:'Alle',      von:1, bis:1e9},
-  klein: {label:'Klein',     von:1, bis:5},
-  mittel:{label:'Mittel',    von:6, bis:18},
-  gross: {label:'Kraftvoll', von:19,bis:1e9}
+  alle:  {von:1, bis:1e9},
+  klein: {von:1, bis:5},
+  mittel:{von:6, bis:18},
+  gross: {von:19,bis:1e9}
 };
+TXT.de.SIZE={alle:'Alle',klein:'Klein',mittel:'Mittel',gross:'Kraftvoll'};
+TXT.en.SIZE={alle:'All',klein:'Small',mittel:'Medium',gross:'Powerful'};
+const sizeLabel=k=>T().SIZE[k]||k;
 
 function viewCheckin(){
   const ziele=activeGoals();
@@ -1308,9 +1733,9 @@ function viewCheckin(){
   </div>`;
 
   if(!ziele.length){
-    return `<h1>Tages-Check-in</h1>
-      <div class="empty">Noch keine aktiven Ziele.<br>
-      <button class="btn pri mt" data-go="new">Ziel pflanzen</button></div>`;
+    return `<h1>${W('checkinTitle')}</h1>
+      <div class="empty">${W('noActiveGoals')}<br>
+      <button class="btn pri mt" data-go="new">${W('plantGoal')}</button></div>`;
   }
 
   const nachTag=goalsByDay();
@@ -1332,56 +1757,51 @@ function viewCheckin(){
 
     schritte=`<div class="card glow">
       <div class="row between" style="margin-bottom:4px">
-        <h3>Schritte in „${esc(gewaehlt.title)}"</h3>
-        <button class="btn sm gh" style="padding:5px 10px;font-size:12px" data-cigoal="">Anderes Ziel</button>
+        <h3>${W('stepsIn')} „${esc(gewaehlt.title)}"</h3>
+        <button class="btn sm gh" style="padding:5px 10px;font-size:12px" data-cigoal="">${W('otherGoal')}</button>
       </div>
-      <p class="small mut" style="margin-bottom:12px">
-        Tippe einen Schritt an, wenn du ihn wirklich gemacht hast. Nichts wird automatisch abgehakt.</p>
+      <p class="small mut" style="margin-bottom:12px">${W('tapWhenDone')}</p>
       <div class="reps" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">
         ${Object.keys(GROESSEN).map(k=>
-          `<button class="${CI.groesse===k?'on':''}" data-cisize="${k}">${GROESSEN[k].label}</button>`).join('')}
+          `<button class="${CI.groesse===k?'on':''}" data-cisize="${k}">${sizeLabel(k)}</button>`).join('')}
       </div>
       ${gefiltert.length?gefiltert.map(t=>{
         const r=repeatOf(t);
         return `<div class="task">
-          <button class="tick" data-toggle="${t.task_id}" aria-label="Erledigt">${CHECK}</button>
+          <button class="tick" data-toggle="${t.task_id}" aria-label="${W('markDone')}">${CHECK}</button>
           <button class="grow" style="text-align:left" data-toggle="${t.task_id}">
             <span class="tt">${esc(t.title)}</span>
             <span class="small mut" style="display:block;margin-top:2px">
-              ${t.points} Punkte · +${TASK_TYPE[typeOf(t)].vitality} Vitalität${
-              r==='once'?'':' · '+REPEAT[r].kurz+' '+doneCount(t)+' von '+repeatTotal(t)}
+              ${t.points} ${W('points')} · +${TASK_TYPE[typeOf(t)].vitality} ${W('vitality')}${
+              r==='once'?'':' · '+repShort(r)+' '+doneCount(t)+' '+W('ofDone')+' '+repeatTotal(t)}
             </span>
           </button>
           <button class="btn sm gh" style="padding:6px 9px;font-size:13px"
-            data-edittask="${t.task_id}" aria-label="Bearbeiten">${PENCIL}</button>
+            data-edittask="${t.task_id}" aria-label="${W('editStep')}">${PENCIL}</button>
         </div>`;}).join('')
-      :`<p class="small mut">${offen.length
-          ? 'In dieser Größe steht heute nichts an. Wähle eine andere Größe.'
-          : 'Für heute ist hier alles geschafft.'}</p>`}
+      :`<p class="small mut">${offen.length ? W('noneThisSize') : W('allDoneHere')}</p>`}
       ${heute.length?`<p class="small mut" style="margin-top:10px">
-        Heute schon geschafft: ${heute.map(t=>esc(t.title)).join(', ')}.</p>`:''}
-      <button class="btn sm gh mt" style="width:100%" data-addtask="${gewaehlt.goal_id}">+ Neuer Schritt</button>
-      <button class="btn sm gh mt" style="width:100%" data-goal="${gewaehlt.goal_id}">Ziel öffnen</button>
+        ${W('alreadyToday')} ${heute.map(t=>esc(t.title)).join(', ')}.</p>`:''}
+      <button class="btn sm gh mt" style="width:100%" data-addtask="${gewaehlt.goal_id}">${W('newStep')}</button>
+      <button class="btn sm gh mt" style="width:100%" data-goal="${gewaehlt.goal_id}">${W('openGoal')}</button>
     </div>`;
   }
 
-  return `<h1>Tages-Check-in</h1>
+  return `<h1>${W('checkinTitle')}</h1>
   <p class="small mut" style="margin:4px 0 16px">
-    ${eigen?'Du hast heute eingecheckt. Du kannst alles ändern.':'Kurz einordnen, wo du heute stehst.'}
+    ${eigen?W('checkedInAlready'):W('checkinIntro')}
   </p>
 
   <div class="card">
-    <label>Wie viel Energie hast du heute?</label>
+    <label>${W('energyQ')}</label>
     ${skala('energy',CI.energy,'ci')}
-    <label class="mt">Wie ist deine Stimmung?</label>
+    <label class="mt">${W('moodQ')}</label>
     ${skala('mood',CI.mood,'ci')}
   </div>
 
   <div class="card">
-    <h3 style="margin-bottom:6px">Wie fühlt sich heute jedes Ziel an?</h3>
-    <p class="small mut" style="margin-bottom:14px">
-      1 heißt: heute schwer. 5 heißt: da habe ich Lust drauf.
-      Danach siehst du, was heute am besten passt.</p>
+    <h3 style="margin-bottom:6px">${W('rateGoalsTitle')}</h3>
+    <p class="small mut" style="margin-bottom:14px">${W('rateGoalsHint')}</p>
     ${zumBewerten.map(g=>{
       const m=goalMood(g.goal_id);
       const offen=openTasks(g.goal_id).length;
@@ -1393,12 +1813,12 @@ function viewCheckin(){
             <div class="row between" style="gap:6px">
               <span style="font-weight:600;font-size:14.5px" class="grow">${esc(g.title)}</span>
               ${m?`<span class="chip vit-c" style="flex:0 0 auto">${m}/5</span>`:''}
-              ${g.is_primary?'<span class="chip pri-c" style="font-size:10px;padding:2px 7px;flex:0 0 auto">Primär</span>':''}
+              ${g.is_primary?`<span class="chip pri-c" style="font-size:10px;padding:2px 7px;flex:0 0 auto">${W('primaryShort')}</span>`:''}
             </div>
             <div class="small mut" style="margin-top:2px">
-              ${Math.round(g.progress_percent)}% gewachsen · Vitalität ${Math.round(g.vitality)}%
-              ${offen?' · '+offen+' Schritt'+(offen===1?'':'e')+' heute':' · heute nichts offen'}
-              ${d>=2?' · <span style="color:var(--danger)">'+d+' Tage ohne Schritt</span>':''}
+              ${Math.round(g.progress_percent)}% ${W('grown')} · ${W('vitality')} ${Math.round(g.vitality)}%
+              ${offen?' · '+offen+' '+(offen===1?W('stepsToday'):W('stepsTodayPl')):' · '+W('nothingToday')}
+              ${d>=2?' · <span style="color:var(--danger)">'+d+' '+W('daysNoStep')+'</span>':''}
             </div>
           </div>
         </div>
@@ -1407,7 +1827,7 @@ function viewCheckin(){
   </div>
 
   ${bewertet?`<div class="card glow">
-    <h3 style="margin-bottom:8px">Heute passt am besten</h3>
+    <h3 style="margin-bottom:8px">${W('bestToday')}</h3>
     <div class="row" style="gap:10px">
       <div style="flex:0 0 64px">${flowerSVG(empfehlung,64)}</div>
       <div class="grow">
@@ -1415,22 +1835,21 @@ function viewCheckin(){
         <div class="small mut" style="margin-top:2px">
           ${dayScoreGrund(empfehlung,activeGoals())}<br>
           ${openTasks(empfehlung.goal_id).length
-            ? openTasks(empfehlung.goal_id).length+' Schritte stehen heute bereit.'
-            : 'Hier steht heute nichts offen.'}
+            ? openTasks(empfehlung.goal_id).length+' '+W('stepsReady')
+            : W('nothingOpenHere')}
         </div>
       </div>
     </div>
-    <div class="bubble mt"><b>Coach:</b> ${
-      CI.energy&&CI.energy<=2 ? pick(COACH.lowEnergy)
-      : 'Du entscheidest. Der Vorschlag ist nur ein Vorschlag.'}</div>
-    <button class="btn pri mt" data-cigoal="${empfehlung.goal_id}">Schritte hier anzeigen</button>
+    <div class="bubble mt"><b>${W('coach')}:</b> ${
+      CI.energy&&CI.energy<=2 ? pick(COACH.lowEnergy) : W('yourCall')}</div>
+    <button class="btn pri mt" data-cigoal="${empfehlung.goal_id}">${W('showStepsHere')}</button>
   </div>`:`<div class="bubble" style="margin-bottom:14px">
-    <b>Coach:</b> Bewerte deine Ziele oben, dann sage ich dir, was heute am besten passt.
+    <b>${W('coach')}:</b> ${W('rateFirst')}
   </div>`}
 
   ${gewaehlt?'':`<div class="card">
-    <h3 style="margin-bottom:4px">Oder direkt ein Ziel wählen</h3>
-    <p class="small mut" style="margin-bottom:10px">Sortiert nach deiner heutigen Bewertung.</p>
+    <h3 style="margin-bottom:4px">${W('orPickGoal')}</h3>
+    <p class="small mut" style="margin-bottom:10px">${W('sortedByRating')}</p>
     <div class="col">
       ${nachTag.map(g=>{
         const m=goalMood(g.goal_id), o=openTasks(g.goal_id).length;
@@ -1438,8 +1857,8 @@ function viewCheckin(){
           data-cigoal="${g.goal_id}">
           <span class="trunc grow" style="text-align:left">${esc(g.title)}</span>
           ${m?`<span class="chip vit-c" style="flex:0 0 auto">${m}/5</span>`:
-              '<span class="chip" style="flex:0 0 auto">nicht bewertet</span>'}
-          <span class="chip ${o?'grow-c':''}" style="flex:0 0 auto">${o} Schritt${o===1?'':'e'}</span>
+              `<span class="chip" style="flex:0 0 auto">${W('notRated')}</span>`}
+          <span class="chip ${o?'grow-c':''}" style="flex:0 0 auto">${o} ${o===1?W('step'):W('steps')}</span>
         </button>`;}).join('')}
     </div>
   </div>`}
@@ -1448,14 +1867,14 @@ function viewCheckin(){
 
   ${(()=>{const tage=[...new Set(DB.checkins.map(c=>c.date))].sort().slice(-7).reverse();
     return tage.length?`<div class="card">
-    <h3 style="margin-bottom:10px">Letzte Check-ins</h3>
+    <h3 style="margin-bottom:10px">${W('lastCheckins')}</h3>
     ${tage.map(datum=>{
       const e=DB.checkins.find(c=>c.date===datum&&!c.goal_id);
       const anz=DB.checkins.filter(c=>c.date===datum&&c.goal_id&&c.motivation).length;
       return `<div class="row between small" style="padding:5px 0;border-bottom:1px solid var(--line)">
-        <span class="mut">${new Date(datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})}</span>
-        <span>${e&&e.energy?'Energie '+e.energy:'—'}${e&&e.mood?' · Stimmung '+e.mood:''}${
-          anz?' · '+anz+' Ziel'+(anz===1?'':'e')+' bewertet':''}</span>
+        <span class="mut">${new Date(datum).toLocaleDateString(locale(),{day:'2-digit',month:'2-digit'})}</span>
+        <span>${e&&e.energy?W('energy')+' '+e.energy:'—'}${e&&e.mood?' · '+W('mood')+' '+e.mood:''}${
+          anz?' · '+anz+' '+(anz===1?W('goalsRated'):W('goalsRatedPl')):''}</span>
       </div>`;}).join('')}
   </div>`:''})()}`;
 }
@@ -1465,11 +1884,11 @@ function viewCheckin(){
    Schritt 1 Result · 2 Purpose · 3 Messbarkeit + Zeit · 4 Priorität · 5 Aktion Plan
    ========================================================================== */
 const AREAS=Object.keys(LIFE_AREA_HUE);
-let NEW={step:1,title:'',purpose:'',success:'',target:'',area:'Gesundheit',
+let NEW={step:1,title:'',purpose:'',success:'',target:'',area:'health',
   importance:7,urgency:5,impact:7,resistance:3,tasks:[],points:5,repeat:'once',repeatN:30,editIdx:null,draft:'',editing:null};
 
 function resetNew(){
-  NEW={step:1,title:'',purpose:'',success:'',target:'',area:'Gesundheit',
+  NEW={step:1,title:'',purpose:'',success:'',target:'',area:'health',
     importance:7,urgency:5,impact:7,resistance:3,tasks:[],points:5,repeat:'once',repeatN:30,editIdx:null,draft:'',editing:null};
 }
 function scaleRow(field,label,hint){
@@ -1489,21 +1908,55 @@ function repeatPicker(rep,anz,feld){
   feld=feld||'rep';
   const r=REPEAT[rep]?rep:'once';
   return `<div style="margin-top:14px">
-    <label>Wiederholung</label>
+    <label>${W('repeatLbl')}</label>
     <div class="reps">${Object.keys(REPEAT).map(k=>
-      `<button class="${k===r?'on':''}" data-rep="${feld}:${k}">${REPEAT[k].label}</button>`).join('')}</div>
-    ${r==='once'?'<p class="small mut" style="margin-top:6px">Einmal abhaken, dann erledigt.</p>'
+      `<button class="${k===r?'on':''}" data-rep="${feld}:${k}">${repLabel(k)}</button>`).join('')}</div>
+    ${r==='once'?`<p class="small mut" style="margin-top:6px">${W('onceHint')}</p>`
     :`<div style="margin-top:10px">
        <div class="row between" style="margin-bottom:6px">
-         <label style="margin:0">Wie oft insgesamt?</label>
-         <span class="chip vit-c">${anz}× · ${anz*0+anz} ${r==='daily'?'Tage':'Wochen'}</span>
+         <label style="margin:0">${W('howOften')}</label>
+         <span class="chip vit-c">${anz}× · ${anz} ${r==='daily'?W('days'):W('weeks')}</span>
        </div>
        <div class="reps wide">${REPEAT[r].anzahl.map(n=>
          `<button class="${n===anz?'on':''}" data-repn="${feld}:${n}">${n}</button>`).join('')}</div>
        <p class="small mut" style="margin-top:6px">
-         Einmal ${REPEAT[r].kurz} abhakbar. Kommt ${r==='daily'?'am nächsten Tag':'in der nächsten Woche'}
-         zurück, bis alle ${anz} geschafft sind.</p>
+         ${W('repeatHint1')} ${repShort(r)}${W('repeatHint2')} ${r==='daily'?W('nextDay'):W('nextWeek')}
+         ${W('repeatHint3')} ${anz} ${W('repeatHint4')}</p>
      </div>`}
+  </div>`;
+}
+
+/* Was eine Reihe insgesamt zum Ziel beiträgt — sichtbar, bevor sie angelegt wird.
+   Ohne diese Zeile lässt sich ein Ziel versehentlich so groß machen,
+   dass die Blume praktisch stehenbleibt. */
+function seriesInfo(punkte,rep,anz,goalId){
+  const mal = (REPEAT[rep]&&rep!=='once') ? Math.max(1,anz) : 1;
+  const summe = punkte*mal;
+  if(mal===1 && summe<40) return '';
+  let anteil='';
+  if(goalId){
+    const g=DB.goals.find(x=>x.goal_id===goalId);
+    if(g){
+      const rest=goalTasks(goalId).reduce((a,t)=>a+taskTotalPoints(t),0);
+      const gesamt=Math.max(1,rest+summe);
+      anteil=Math.round(summe/gesamt*100);
+    }
+  }
+  const zuGross = summe>=300;
+  return `<div class="card mt" style="background:var(--bg2);margin-bottom:0${
+      zuGross?';border-color:rgba(255,209,102,.5)':''}">
+    <div class="row between">
+      <span class="small mut">${W('seriesTotal')}</span>
+      <span class="chip ${zuGross?'win-c':'grow-c'}">${punkte}${mal>1?' × '+mal:''} = ${summe} ${W('seriesCalc')}</span>
+    </div>
+    ${anteil!==''?`<div class="row between mt">
+      <span class="small mut">${W('shareOfGoal')}</span>
+      <span class="chip ${anteil>=40?'warn':''}">${anteil}%</span>
+    </div>`:''}
+    ${zuGross?`<p class="small mut" style="margin-top:8px">
+      <b style="color:var(--win)">${W('seriesWarnTitle')}</b><br>${W('seriesWarn')}</p>`:''}
+    ${anteil>=40?`<p class="small mut" style="margin-top:8px">
+      ${W('stepDominates')} ${anteil}% ${W('stepDominates2')}</p>`:''}
   </div>`;
 }
 
@@ -1513,13 +1966,12 @@ function pointPicker(sel,feld){
   const t=pointsToType(sel);
   return `<div style="margin-top:12px">
     <div class="row between" style="margin-bottom:6px">
-      <label style="margin:0">Wachstumspunkte</label>
-      <span class="chip grow-c">${sel} · ${TASK_TYPE[t].label}</span>
+      <label style="margin:0">${W('pointsLbl')}</label>
+      <span class="chip grow-c">${sel} · ${typeLabel(t)}</span>
     </div>
     <div class="pts">${POINTS.map(p=>
       `<button class="${p===sel?'on':''}" data-pts="${feld}:${p}">${p}</button>`).join('')}</div>
-    <p class="small mut" style="margin-top:6px">1 bis 3 für echte Zwischenschritte,
-      40 bis 50 nur für Schlüsselaufgaben.</p>
+    <p class="small mut" style="margin-top:6px">${W('pointsHint')}</p>
   </div>`;
 }
 
@@ -1531,17 +1983,17 @@ function viewNew(){
   let body='';
   if(s===1){
     body=`<div class="zk" style="margin-bottom:14px">
-        <div class="lbl">Schritt 1 — Result</div>
-        <div class="val">Was möchtest du konkret erreichen?</div></div>
-      <label>Zielname</label>
-      <input id="f-title" value="${esc(NEW.title)}" placeholder="${esc(ZIEL_BEISPIEL[NEW.area]||'z.B. Kinderbuch vermarkten')}">
-      <label class="mt">Lebensbereich — er bestimmt die Farbe deiner Blume</label>
+        <div class="lbl">${W('step1')}</div>
+        <div class="val">${W('step1q')}</div></div>
+      <label>${W('goalName')}</label>
+      <input id="f-title" value="${esc(NEW.title)}" placeholder="${esc(zielBeispiel(NEW.area))}">
+      <label class="mt">${W('areaLbl')}</label>
       <div class="areas">
         ${AREAS.map(a=>{
           const h=LIFE_AREA_HUE[a];
           return `<button class="area ${NEW.area===a?'on':''}" data-area="${esc(a)}"
             style="--ah:${hsl(h,74,52)};--ah2:${hsl(h+46,84,64)}">
-            <i></i><span>${a}</span></button>`;
+            <i></i><span>${esc(areaLabel(a))}</span></button>`;
         }).join('')}
       </div>
       <div class="center mt" style="opacity:.9">
@@ -1550,30 +2002,30 @@ function viewNew(){
   }
   if(s===2){
     body=`<div class="zk" style="margin-bottom:14px">
-        <div class="lbl">Schritt 2 — Purpose</div>
-        <div class="val">Warum ist dieses Ziel für dich wichtig?</div></div>
-      <textarea id="f-purpose" placeholder="Der Grund, der dich auch an schlechten Tagen trägt.">${esc(NEW.purpose)}</textarea>
-      <p class="small mut mt">Das Warum ist der Teil, den du an Tagen mit wenig Energie brauchst.</p>`;
+        <div class="lbl">${W('step2')}</div>
+        <div class="val">${W('step2q')}</div></div>
+      <textarea id="f-purpose" placeholder="${esc(W('purposePh'))}">${esc(NEW.purpose)}</textarea>
+      <p class="small mut mt">${W('purposeHint')}</p>`;
   }
   if(s===3){
     body=`<div class="zk" style="margin-bottom:14px">
-        <div class="lbl">Schritt 3 — Messbarkeit</div>
-        <div class="val">Woran erkennst du, dass das Ziel erfüllt ist?</div></div>
-      <textarea id="f-success" placeholder="${esc(ERFOLG_BEISPIEL[NEW.area]||'Woran genau merkst du, dass du am Ziel bist?')}">${esc(NEW.success)}</textarea>
-      <label class="mt">Bis wann möchtest du das Ziel erreichen?</label>
+        <div class="lbl">${W('step3')}</div>
+        <div class="val">${W('step3q')}</div></div>
+      <textarea id="f-success" placeholder="${esc(erfolgFuer(NEW.area))}">${esc(NEW.success)}</textarea>
+      <label class="mt">${W('whenBy')}</label>
       <input type="date" id="f-target" value="${NEW.target}">`;
   }
   if(s===4){
     body=`<div class="zk" style="margin-bottom:14px">
-        <div class="lbl">Schritt 4 — Priorität</div>
-        <div class="val">Wie ordnet sich dieses Ziel ein?</div></div>
-      ${scaleRow('importance','Wie wichtig ist dir dieses Ziel?')}
-      ${scaleRow('urgency','Wie dringend ist es?')}
-      ${scaleRow('impact','Wie stark verbessert es dein Leben?')}
-      ${scaleRow('resistance','Wie hoch ist dein innerer Widerstand?','Hoher Widerstand senkt die Priorität — das ist Absicht. Ziele mit viel Widerstand brauchen erst kleinere Schritte.')}
+        <div class="lbl">${W('step4')}</div>
+        <div class="val">${W('step4q')}</div></div>
+      ${scaleRow('importance',W('impQ'))}
+      ${scaleRow('urgency',W('urgQ'))}
+      ${scaleRow('impact',W('effQ'))}
+      ${scaleRow('resistance',W('resQ'),W('resHint'))}
       <div class="card" style="background:var(--bg2);margin:0">
         <div class="row between">
-          <span class="small mut">Wichtigkeit + Dringlichkeit + Wirkung − Widerstand</span>
+          <span class="small mut">${W('prioFormula')}</span>
           <span class="chip grow-c">${prio}</span>
         </div>
       </div>`;
@@ -1582,62 +2034,61 @@ function viewNew(){
     const sugg=suggestTasks(NEW.area);
     const vorhanden = NEW.editing ? goalTasks(NEW.editing) : [];
     body=`<div class="zk" style="margin-bottom:14px">
-        <div class="lbl">Schritt 5 — Aktion Plan</div>
-        <div class="val">Welche Schritte bringen dich diesem Ziel näher?</div></div>
+        <div class="lbl">${W('step5')}</div>
+        <div class="val">${W('step5q')}</div></div>
       ${vorhanden.length?`<p class="small mut" style="margin-bottom:10px">
-        Dieses Ziel hat bereits ${vorhanden.length} Schritte. Sie bleiben erhalten —
-        hier kommt nur Neues dazu.</p>`:''}
+        ${W('alreadyHas')} ${vorhanden.length} ${W('stepsStay')}</p>`:''}
       ${NEW.tasks.length?NEW.tasks.map((t,i)=>`<div class="task ${NEW.editIdx===i?'imEdit':''}">
         <span class="chip grow-c" style="flex:0 0 auto">${t.repeat&&t.repeat!=='once'
           ? t.points+'×'+t.repeatN : t.points}</span>
         <button class="grow" style="text-align:left" data-editnew="${i}">
           <span class="tt">${esc(t.title)}</span>
-          <span class="small mut" style="display:block">${TASK_TYPE[pointsToType(t.points)].label}${
-            t.repeat&&t.repeat!=='once'?' · '+REPEAT[t.repeat].kurz+', '+t.repeatN+'×':''}${
-            NEW.editIdx===i?' · wird bearbeitet':''}</span></button>
+          <span class="small mut" style="display:block">${typeLabel(pointsToType(t.points))}${
+            t.repeat&&t.repeat!=='once'?' · '+repShort(t.repeat)+', '+t.repeatN+'×':''}${
+            NEW.editIdx===i?' · '+W('changeStep'):''}</span></button>
         <button class="btn sm gh" style="padding:6px 9px;font-size:13px"
-          data-editnew="${i}" aria-label="Bearbeiten">${PENCIL}</button>
+          data-editnew="${i}" aria-label="${W('editStep')}">${PENCIL}</button>
         <button class="btn sm gh" style="padding:6px 9px;font-size:12px"
-          data-rmnew="${i}" aria-label="Entfernen">✕</button>
-      </div>`).join(''):(vorhanden.length?'':'<p class="small mut" style="margin-bottom:12px">Noch keine Schritte.</p>')}
-      <label class="mt">${NEW.editIdx==null?'Eigenen Schritt hinzufügen':'Schritt ändern'}</label>
+          data-rmnew="${i}" aria-label="${W('deleteStep')}">✕</button>
+      </div>`).join(''):(vorhanden.length?'':`<p class="small mut" style="margin-bottom:12px">${W('noStepsYet')}</p>`)}
+      <label class="mt">${NEW.editIdx==null?W('addOwnStep'):W('changeStep')}</label>
       <div class="row" style="gap:8px">
         <input id="f-newtask" class="grow" placeholder="${esc(beispielFuer(NEW.area))}"
           value="${esc(NEW.editIdx==null ? (NEW.draft||'')
             : (NEW.tasks[NEW.editIdx]?NEW.tasks[NEW.editIdx].title:''))}">
         <button class="btn sm pri" style="flex:0 0 auto;min-width:56px" data-addnew="1">
           ${NEW.editIdx==null?'+':'OK'}</button>
-        ${NEW.editIdx==null?'':'<button class="btn sm gh" style="flex:0 0 auto" data-canceledit="1">Abbrechen</button>'}
+        ${NEW.editIdx==null?'':`<button class="btn sm gh" style="flex:0 0 auto" data-canceledit="1">${W('cancel')}</button>`}
       </div>
       ${pointPicker(NEW.points)}
       ${repeatPicker(NEW.repeat,NEW.repeatN,'rep')}
-      <h3 style="margin:16px 0 8px">Coach-Vorschläge</h3>
+      ${seriesInfo(NEW.points,NEW.repeat,NEW.repeatN,null)}
+      <h3 style="margin:16px 0 8px">${W('coachSuggestions')}</h3>
       <div class="row" style="flex-wrap:wrap;gap:7px">
         ${sugg.map((x,i)=>NEW.tasks.some(t=>t.title===x.title)?'':
           `<button class="chip" style="cursor:pointer" data-sugg="${i}">+ ${esc(x.title)}
             <b style="color:var(--grow)">${x.points}${x.repeat==='once'?'':'×'+x.repeatN}</b>${
-            x.repeat==='once'?'':' <span style="color:var(--vit)">'+REPEAT[x.repeat].kurz+'</span>'}</button>`).join('')}
+            x.repeat==='once'?'':' <span style="color:var(--vit)">'+repShort(x.repeat)+'</span>'}</button>`).join('')}
       </div>
       <div class="card mt" style="background:var(--bg2);margin-bottom:0">
         <div class="row between">
-          <span class="small mut">Gesamtumfang</span>
-          <span class="chip grow-c">${totalPoints} Wachstumspunkte</span>
+          <span class="small mut">${W('totalScope')}</span>
+          <span class="chip grow-c">${totalPoints} ${W('growthPoints')}</span>
         </div>
-        <p class="small mut" style="margin-top:6px">Je mehr Punkte ein Ziel umfasst,
-          desto langsamer wächst die Blume — und desto mehr Zwischenschritte trägt sie.</p>
+        <p class="small mut" style="margin-top:6px">${W('scopeHint')}</p>
       </div>`;
   }
 
   return `<div class="row between" style="margin-bottom:14px">
-      <h1>${NEW.editing?'Ziel anpassen':'Neues Ziel'}</h1>
-      <button class="btn sm gh" data-cancelnew="1">Abbrechen</button>
+      <h1>${NEW.editing?W('adjustGoal'):W('newGoal')}</h1>
+      <button class="btn sm gh" data-cancelnew="1">${W('cancel')}</button>
     </div>
     <div class="steps">${[1,2,3,4,5].map(n=>`<i class="${n<=s?'on':''}"></i>`).join('')}</div>
     <div class="card">${body}</div>
     <div class="row" style="gap:9px">
-      ${s>1?'<button class="btn gh" data-step="'+(s-1)+'">Zurück</button>':''}
+      ${s>1?`<button class="btn gh" data-step="${s-1}">${W('back')}</button>`:''}
       <button class="btn pri" id="btn-next" data-step="${s+1}">
-        ${s===5?(NEW.editing?'Änderungen speichern':'Ziel pflanzen'):'Weiter'}</button>
+        ${s===5?(NEW.editing?W('saveChanges'):W('plantIt')):W('next')}</button>
     </div>
     <p class="small mut center mt" id="next-hint"></p>`;
 }
@@ -1646,12 +2097,12 @@ function viewNew(){
    Leerer String bedeutet: Weiter ist möglich. */
 function stepBlocker(){
   captureNew();
-  if(NEW.step===1 && !NEW.title.trim()) return 'Gib deinem Ziel zuerst einen Namen.';
+  if(NEW.step===1 && !NEW.title.trim()) return W('needName');
   if(NEW.step===5){
     /* Beim Bearbeiten zählen die Schritte mit, die das Ziel schon hat */
     const vorhanden = NEW.editing ? goalTasks(NEW.editing).length : 0;
     if(!NEW.tasks.filter(t=>t.title&&t.title.trim()).length && !vorhanden)
-      return 'Mindestens ein Schritt wird gebraucht, damit die Blume wachsen kann.';
+      return W('needStep');
   }
   return '';
 }
@@ -1698,7 +2149,7 @@ function saveNewGoal(){
     g.priority_score=calculateGoalPriority(g);
     /* neu hinzugefügte Schritte anhängen */
     NEW.tasks.filter(t=>t.isNew).forEach(t=>addTask(g.goal_id,t.title,t.points,t.repeat,t.repeatN));
-    recalcGoal(g); save(); toast('Ziel aktualisiert'); const id=g.goal_id; resetNew(); go('goal',id); return;
+    recalcGoal(g); save(); toast(W('goalUpdated')); const id=g.goal_id; resetNew(); go('goal',id); return;
   }
   const id=uid();
   const g={goal_id:id,title:NEW.title.trim(),description:'',purpose:NEW.purpose,
@@ -1714,7 +2165,7 @@ function saveNewGoal(){
   NEW.tasks.forEach(t=>addTask(id,t.title,t.points,t.repeat,t.repeatN));
   recalcGoal(g);
   save(); resetNew();
-  toast('Deine Cyberblume ist gepflanzt');
+  toast(W('planted'));
   go('goal',id);
 }
 
@@ -1768,25 +2219,28 @@ function recalcGoal(g){
    Schritt-Hinzufügen-Sheet
    ========================================================================== */
 let SHEET_POINTS=5, SHEET_REP='once', SHEET_REPN=30;
+let SHEET_GOAL=null;
 function sheetBody(){
-  return pointPicker(SHEET_POINTS,'sheet')+repeatPicker(SHEET_REP,SHEET_REPN,'sheet');
+  return pointPicker(SHEET_POINTS,'sheet')
+       + repeatPicker(SHEET_REP,SHEET_REPN,'sheet')
+       + seriesInfo(SHEET_POINTS,SHEET_REP,SHEET_REPN,SHEET_GOAL);
 }
 function taskSheet(goalId){
   const g=DB.goals.find(x=>x.goal_id===goalId);
   const sugg=suggestTasks(g.life_area).filter(x=>!goalTasks(goalId).some(t=>t.title===x.title));
-  SHEET_POINTS=5; SHEET_REP='once'; SHEET_REPN=30;
-  sheet(`<h2>Schritt hinzufügen</h2>
-    <p class="small mut" style="margin:4px 0 14px">Zu „${esc(g.title)}“</p>
-    <label>Was ist der Schritt?</label>
+  SHEET_POINTS=5; SHEET_REP='once'; SHEET_REPN=30; SHEET_GOAL=goalId;
+  sheet(`<h2>${W('addStepTitle')}</h2>
+    <p class="small mut" style="margin:4px 0 14px">${W('toGoal')} „${esc(g.title)}“</p>
+    <label>${W('whatStep')}</label>
     <input id="s-title" placeholder="${esc(beispielFuer(g.life_area))}">
     <div id="s-points">${sheetBody()}</div>
-    <button class="btn pri mt" data-savetask="${goalId}">Hinzufügen</button>
-    ${sugg.length?`<h3 style="margin:18px 0 8px">Coach-Vorschläge</h3>
+    <button class="btn pri mt" data-savetask="${goalId}">${W('add')}</button>
+    ${sugg.length?`<h3 style="margin:18px 0 8px">${W('coachSuggestions')}</h3>
     <div class="row" style="flex-wrap:wrap;gap:7px">
       ${sugg.map((x,i)=>`<button class="chip" style="cursor:pointer"
         data-quickadd="${goalId}|${i}">+ ${esc(x.title)}
         <b style="color:var(--grow)">${x.points}${x.repeat==='once'?'':'×'+x.repeatN}</b>${
-        x.repeat==='once'?'':' <span style="color:var(--vit)">'+REPEAT[x.repeat].kurz+'</span>'}</button>`).join('')}
+        x.repeat==='once'?'':' <span style="color:var(--vit)">'+repShort(x.repeat)+'</span>'}</button>`).join('')}
     </div>`:''}`);
   setTimeout(()=>{const i=$('s-title'); if(i)i.focus();},60);
 }
@@ -1807,18 +2261,18 @@ function taskEditSheet(taskId){
   SHEET_POINTS=snapPoints(t.points);
   SHEET_REP=repeatOf(t);
   SHEET_REPN=repeatTotal(t);
+  SHEET_GOAL=g.goal_id;
   const getan=doneCount(t);
-  sheet(`<h2>Schritt bearbeiten</h2>
-    <p class="small mut" style="margin:4px 0 14px">In „${esc(g.title)}“</p>
-    <label>Text des Schritts</label>
+  sheet(`<h2>${W('editStep')}</h2>
+    <p class="small mut" style="margin:4px 0 14px">${W('inGoal')} „${esc(g.title)}“</p>
+    <label>${W('stepText')}</label>
     <input id="s-title" value="${esc(t.title)}">
     <div id="s-points">${sheetBody()}</div>
-    ${getan?`<p class="small mut mt">Bereits ${getan}× erledigt. Änderst du Punkte oder Anzahl,
-      wird der Fortschritt des Ziels neu berechnet.</p>`:''}
-    <button class="btn pri mt" data-updatetask="${taskId}">Änderungen speichern</button>
-    <button class="btn sm mt" style="width:100%" data-copytask="${taskId}">Als Kopie anlegen</button>
-    <button class="btn sm gh mt" style="width:100%" data-closesheet="1">Abbrechen</button>
-    <button class="btn sm danger mt" style="width:100%" data-deltask="${taskId}">Schritt löschen</button>`);
+    ${getan?`<p class="small mut mt">${W('alreadyDoneTimes')} ${getan}${W('recalcNote')}</p>`:''}
+    <button class="btn pri mt" data-updatetask="${taskId}">${W('saveStep')}</button>
+    <button class="btn sm mt" style="width:100%" data-copytask="${taskId}">${W('copyStep')}</button>
+    <button class="btn sm gh mt" style="width:100%" data-closesheet="1">${W('cancel')}</button>
+    <button class="btn sm danger mt" style="width:100%" data-deltask="${taskId}">${W('deleteStep')}</button>`);
   setTimeout(()=>{const i=$('s-title'); if(i){i.focus();
     try{i.setSelectionRange(i.value.length,i.value.length);}catch(e){}}},60);
 }
@@ -1860,7 +2314,7 @@ function doComplete(taskId){
   if(r){
     if(r.bloomed) bloomScreen(g);
     else if(r.phaseUp) toast(COACH.phaseUp);
-    else if(r.reihe && r.getan<r.ziel) toast(r.getan+' von '+r.ziel+' geschafft. Morgen weiter.');
+    else if(r.reihe && r.getan<r.ziel) toast(r.getan+' '+W('ofDone')+' '+r.ziel+' '+W('doneMorrow'));
     else toast(pick(COACH.win));
   }
   render();
@@ -1868,15 +2322,15 @@ function doComplete(taskId){
 function bloomScreen(g){
   sheet(`<div class="center">
     ${flowerSVG(g,220)}
-    <h1 style="margin-top:10px">Ziel erreicht</h1>
+    <h1 style="margin-top:10px">${W('goalReached')}</h1>
     <p class="mt">${COACH.bloom}</p>
     <div class="card mt" style="text-align:left">
       <div class="zk"><div class="lbl">Result</div><div class="val">${esc(g.success_criteria)||esc(g.title)}</div></div>
       <div class="zk mt"><div class="lbl">Purpose</div><div class="val">${esc(g.purpose)||'—'}</div></div>
     </div>
-    <p class="small mut mt">${g.total_points} Wachstumspunkte ·
-      gestartet ${new Date(g.start_date).toLocaleDateString('de-DE')}</p>
-    <button class="btn pri mt" data-closesheet="1">Weiter</button>
+    <p class="small mut mt">${g.total_points} ${W('growthPoints')} ·
+      ${W('started')} ${new Date(g.start_date).toLocaleDateString(locale())}</p>
+    <button class="btn pri mt" data-closesheet="1">${W('continueBtn')}</button>
   </div>`);
 }
 
@@ -1893,19 +2347,18 @@ function showError(err,wo){
   const stack=String(err&&err.stack||'').split('\n').slice(0,5).join('\n');
   const html=`
     <div class="card" style="border-color:rgba(255,122,138,.5)">
-      <h2>Da ist etwas schiefgelaufen</h2>
-      <p class="small mut mt">Die App läuft weiter — deine Ziele sind gespeichert.
-        Beim Schritt „${esc(wo||'unbekannt')}" ist ein Fehler aufgetreten.</p>
+      <h2>${W('errTitle')}</h2>
+      <p class="small mut mt">${W('errIntro')} „${esc(wo||W('errUnknown'))}"${W('errIntro2')}</p>
       <div class="card mt" style="background:var(--bg2);margin-bottom:0">
         <p class="small" style="font-family:ui-monospace,monospace;word-break:break-word">${esc(msg)}</p>
         ${stack?`<p class="small mut" style="font-family:ui-monospace,monospace;white-space:pre-wrap;margin-top:8px">${esc(stack)}</p>`:''}
       </div>
       <div class="col mt">
-        <button class="btn pri" data-go="dash">Zurück zum Start</button>
-        <button class="btn sm gh" data-export="1">Daten als Datei sichern</button>
-        <button class="btn sm gh" data-copyerr="1">Fehlertext kopieren</button>
+        <button class="btn pri" data-go="dash">${W('backHome')}</button>
+        <button class="btn sm gh" data-export="1">${W('exportData')}</button>
+        <button class="btn sm gh" data-copyerr="1">${W('copyError')}</button>
       </div>
-      <p class="small mut mt">Wenn das wiederholt passiert: Fehlertext kopieren und schicken.</p>
+      <p class="small mut mt">${W('errRepeat')}</p>
     </div>`;
   try{ const a=$('app'); if(a){a.innerHTML=html; renderNav(); return;} }catch(e){}
   try{ document.body.innerHTML='<div class="wrap" id="app">'+html+'</div>'; }catch(e){}
@@ -1924,8 +2377,8 @@ function exportData(){
     a.download='bloomgoal-daten-'+todayISO()+'.json';
     document.body.appendChild(a); a.click();
     setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},1000);
-    toast('Daten gesichert');
-  }catch(e){ toast('Sichern nicht möglich: '+e.message); }
+    toast(W('dataSaved'));
+  }catch(e){ toast(W('copyFailed')+' '+e.message); }
 }
 
 /* ==========================================================================
@@ -1942,7 +2395,7 @@ function handleClick(e){
     '[data-addnew],[data-sugg],[data-rmnew],[data-cancelnew],[data-savetask],[data-quickadd],'+
     '[data-savecheckin],[data-cigoal],[data-cisize],[data-cig],[data-closesheet],[data-demo],[data-area],[data-pts],'+
     '[data-edittask],[data-updatetask],[data-editnew],[data-canceledit],'+
-    '[data-rep],[data-repn],[data-copytask]');
+    '[data-rep],[data-repn],[data-copytask],[data-lang]');
   if(!el)return;
   const d=el.dataset;
 
@@ -1954,7 +2407,7 @@ function handleClick(e){
     const g=t&&DB.goals.find(x=>x.goal_id===t.goal_id);
     if(!t||!g){ render(); return; }
     if(isDue(t)) doComplete(d.toggle);
-    else if(doneCount(t)>0){ reopenTask(t,g); save(); toast('Zurückgenommen'); render(); }
+    else if(doneCount(t)>0){ reopenTask(t,g); save(); toast(W('undone')); render(); }
     else render();
     return;
   }
@@ -1970,7 +2423,7 @@ function handleClick(e){
   if(d.addtask){ if(DB.goals.some(x=>x.goal_id===d.addtask))taskSheet(d.addtask); return; }
   if(d.edittask){ taskEditSheet(d.edittask); return; }
   if(d.updatetask){
-    if(updateTask(d.updatetask)){ closeSheet(); toast('Schritt geändert'); render(); }
+    if(updateTask(d.updatetask)){ closeSheet(); toast(W('stepChanged')); render(); }
     return;
   }
   if(d.savetask){
@@ -1981,7 +2434,7 @@ function handleClick(e){
     if(!ti){inp.focus();return;}
     addTask(d.savetask,ti,SHEET_POINTS,SHEET_REP,SHEET_REPN);
     recalcGoal(g);
-    save(); closeSheet(); toast('Schritt hinzugefügt'); render(); return;
+    save(); closeSheet(); toast(W('stepAdded')); render(); return;
   }
   if(d.quickadd){
     const [gid,idx]=d.quickadd.split('|');
@@ -1991,9 +2444,9 @@ function handleClick(e){
     if(!x){ closeSheet(); render(); return; }
     addTask(gid,x.title,x.points,x.repeat,x.repeatN);
     recalcGoal(g);
-    save(); closeSheet(); toast('Schritt hinzugefügt'); render(); return;
+    save(); closeSheet(); toast(W('stepAdded')); render(); return;
   }
-  if(d.primary){ setPrimary(d.primary); toast('Neues Primärziel gesetzt'); render(); return; }
+  if(d.primary){ setPrimary(d.primary); toast(W('newPrimary')); render(); return; }
   if(d.pause){
     const g=DB.goals.find(x=>x.goal_id===d.pause);
     if(!g){ render(); return; }
@@ -2004,10 +2457,10 @@ function handleClick(e){
   if(d.delgoal){
     const g=DB.goals.find(x=>x.goal_id===d.delgoal);
     if(!g){ render(); return; }
-    sheet(`<h2>Ziel löschen?</h2>
-      <p class="mut small mt">„${esc(g.title)}“ und alle zugehörigen Schritte werden entfernt. Das lässt sich nicht rückgängig machen.</p>
-      <button class="btn danger mt" data-confirmdel="${d.delgoal}">Endgültig löschen</button>
-      <button class="btn gh mt" data-closesheet="1">Behalten</button>`);
+    sheet(`<h2>${W('deleteGoalQ')}</h2>
+      <p class="mut small mt">„${esc(g.title)}“ ${W('deleteGoalWarn')}</p>
+      <button class="btn danger mt" data-confirmdel="${d.delgoal}">${W('deleteForever')}</button>
+      <button class="btn gh mt" data-closesheet="1">${W('keepIt')}</button>`);
     return;
   }
   if(d.editgoal){
@@ -2028,6 +2481,10 @@ function handleClick(e){
     }
     if(n>5){ saveNewGoal(); return; }
     NEW.step=Math.max(1,Math.min(5,n)); render(); return;
+  }
+  if(d.lang){
+    if(d.lang!==LANG){ captureNew(); setLang(d.lang); }
+    render(); return;
   }
   if(d.area){ captureNew(); NEW.area=d.area; render(); return; }
   if(d.nw){ const [f,v]=d.nw.split(':'); NEW[f]=parseInt(v,10); render(); return; }
@@ -2090,7 +2547,7 @@ function handleClick(e){
   if(d.copytask){
     const k=duplicateTask(d.copytask);
     save(); closeSheet();
-    if(k){ toast('Kopie angelegt'); render(); taskEditSheet(k.task_id); }
+    if(k){ toast(W('copyMade')); render(); taskEditSheet(k.task_id); }
     else render();
     return;
   }
@@ -2126,9 +2583,9 @@ function handleClick(e){
       ansicht:VIEW, browser:navigator.userAgent
     },null,2);
     if(navigator.clipboard&&navigator.clipboard.writeText){
-      navigator.clipboard.writeText(txt).then(()=>toast('Fehlertext kopiert'),
-        ()=>toast('Kopieren nicht erlaubt'));
-    }else toast('Kopieren wird hier nicht unterstützt');
+      navigator.clipboard.writeText(txt).then(()=>toast(W('errCopied')),
+        ()=>toast(W('copyNotAllowed')));
+    }else toast(W('copyUnsupported'));
     return;
   }
 }
@@ -2145,7 +2602,7 @@ document.addEventListener('click',e=>{
     const first=activeGoals()[0]; if(first)first.is_primary=true;
   }
   save(); closeSheet(); go('garden');
-  }catch(err){ showError(err,'Löschen'); }
+  }catch(err){ showError(err,'delete'); }
 });
 /* Tippen im Zielanlage-Formular: Werte sichern und Weiter-Button live freigeben */
 ['input','change'].forEach(ev=>document.addEventListener(ev,e=>{
@@ -2193,7 +2650,8 @@ function renderView(){
   if(!html||html.length<40) throw new Error('Die Ansicht hat keinen Inhalt geliefert');
   const app=$('app');
   if(!app) throw new Error('Der Anzeigebereich fehlt im Dokument');
-  app.innerHTML=html;
+  /* Der Sprachumschalter steht über jeder Ansicht, nicht nur auf zweien */
+  app.innerHTML=`<div class="topbar">${langSwitch()}</div>`+html;
   renderNav();
   if(VIEW.name==='new'){
     /* autofocus greift nach innerHTML nicht mehr — Feld selbst fokussieren */
@@ -2206,21 +2664,30 @@ function renderView(){
 /* ==========================================================================
    Demodaten — Beispiel aus dem Blueprint (Abschnitt 16)
    ========================================================================== */
+const DEMO={
+  de:{title:'5 kg abnehmen',
+      purpose:'Ich möchte mehr Energie haben und mich wohler fühlen.',
+      success:'Ich wiege 5 kg weniger und bewege mich regelmäßig 3 Mal pro Woche.'},
+  en:{title:'Lose 10 pounds',
+      purpose:'I want more energy and to feel better in my own skin.',
+      success:'I weigh 10 pounds less and move three times a week.'}
+};
 function loadDemo(){
   const id=uid();
-  const g={goal_id:id,title:'5 kg abnehmen',description:'',
-    purpose:'Ich möchte mehr Energie haben und mich wohler fühlen.',
-    success_criteria:'Ich wiege 5 kg weniger und bewege mich regelmäßig 3 Mal pro Woche.',
-    life_area:'Gesundheit',start_date:todayISO(),target_date:'2026-10-31',status:'active',
+  const dm=DEMO[LANG]||DEMO.de;
+  const g={goal_id:id,title:dm.title,description:'',
+    purpose:dm.purpose,
+    success_criteria:dm.success,
+    life_area:'health',start_date:todayISO(),target_date:'2026-10-31',status:'active',
     importance:9,urgency:7,impact:8,resistance:4,priority_score:20,
     total_points:0,completed_points:0,progress_percent:0,vitality:100,vitality_base:100,
     last_activity_date:todayISO(),flower_phase:1,flower_state:'strong',
     is_primary:!DB.goals.some(x=>x.is_primary),
     created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
   DB.goals.push(g);
-  suggestTasks('Gesundheit').forEach(x=>addTask(id,x.title,x.points,x.repeat,x.repeatN));
+  suggestTasks('health').forEach(x=>addTask(id,x.title,x.points,x.repeat,x.repeatN));
   recalcGoal(g);
-  save(); toast('Beispielziel gepflanzt'); go('goal',id);
+  save(); toast(W('demoPlanted')); go('goal',id);
 }
 
 /* ==========================================================================
@@ -2228,6 +2695,9 @@ function loadDemo(){
    ========================================================================== */
 try{
   load();
+  /* Sprache: gespeicherte Wahl, sonst die des Browsers */
+  LANG = (DB.lang==='en'||DB.lang==='de') ? DB.lang : detectLang();
+  try{ document.documentElement.setAttribute('lang',LANG); }catch(e){}
   /* Gespeicherte Stände reparieren: fehlende Felder ergänzen, unbrauchbare
      Werte durch sinnvolle ersetzen. Ein beschädigter Eintrag darf die App
      nicht in den Fehlerbildschirm zwingen. */
@@ -2237,11 +2707,13 @@ try{
     return Math.max(min,Math.min(max,n));
   };
   DB.goals.forEach(g=>{
-    g.title=String(g.title==null?'Ziel ohne Namen':g.title);
+    g.title=String(g.title==null?'':g.title);
     ['description','purpose','success_criteria'].forEach(k=>{
       if(typeof g[k]!=='string')g[k]='';
     });
-    if(!g.life_area||LIFE_AREA_HUE[g.life_area]==null)g.life_area='Persönlich';
+    /* Ältere Stände speicherten den Bereich als deutschen Klartext */
+    if(AREA_ALT[g.life_area])g.life_area=AREA_ALT[g.life_area];
+    if(!g.life_area||LIFE_AREA_HUE[g.life_area]==null)g.life_area='personal';
     if(['active','paused','completed','archived'].indexOf(g.status)<0)g.status='active';
     if(!istDatum(g.last_activity_date))g.last_activity_date=todayISO();
     if(!istDatum(g.start_date))g.start_date=todayISO();
