@@ -675,27 +675,68 @@ function petalPath(cx,cy,a,r,hw){
 
 /* Pfingstrosenkopf: mehrere Lagen, außen groß und dunkel, innen klein und hell.
    hw ist bewusst größer als der Winkelabstand — dadurch überlappen die Blätter. */
-function peonyHead(cx,cy,r,layers,cols,seedC,op,spin){
-  const spec=[[1.00,8,0.00],[0.82,7,0.42],[0.64,7,0.86],[0.47,6,1.30],[0.31,6,1.74]];
+/* Fächerblüte: Die Blütenblätter steigen aus einem Punkt auf und fächern
+   sich nach oben auf — wie ein Fächer oder eine Muschel. Der Öffnungswinkel
+   wächst mit der Phase, deshalb wirkt das Aufgehen wie eine Bewegung und
+   nicht wie ein Austausch von Bildern. */
+function fanBloom(cx,cy,r,anzahl,spreadGrad,cols,seedC,op){
+  const spread=spreadGrad*Math.PI/180;
+  const mitte=-Math.PI/2;                       // gerade nach oben
+  const a0=mitte-spread/2, schritt=spread/anzahl;
+  const spalt=0.94;                             // feine Lücke zwischen den Blättern
   let s='';
-  for(let L=0;L<layers;L++){
-    const [sc,cnt,rot]=spec[L];
-    const rr=r*sc, hw=(Math.PI/cnt)*1.62;
-    const col=cols[Math.min(L,cols.length-1)];
-    for(let i=0;i<cnt;i++){
-      const a=(i/cnt)*Math.PI*2+rot+spin-Math.PI/2;
-      s+=`<path class="petal" d="${petalPath(cx,cy,a,rr,hw)}" fill="${col}"
-           opacity="${F(op*(0.88+0.12*((i+L)%2)))}"/>`;
-    }
+
+  /* Untergrund: eine geschlossene Fläche, damit der Fächer Körper bekommt */
+  const rand=[];
+  for(let t=0;t<=24;t++){
+    const aa=a0+spread*(t/24);
+    const laenge=r*(0.90+0.10*Math.cos((aa-mitte)*1.15));
+    rand.push(PT(cx,cy,laenge*0.99,aa));
   }
-  /* Herz: Staubgefäße als kleine Punkte im Kreis */
-  s+=`<circle cx="${F(cx)}" cy="${F(cy)}" r="${F(r*0.19)}" fill="${seedC}" opacity="${F(op)}"/>`;
-  for(let i=0;i<9;i++){
-    const a=(i/9)*Math.PI*2+spin;
-    const q=PT(cx,cy,r*0.26,a);
-    s+=`<circle cx="${q[0]}" cy="${q[1]}" r="${F(r*0.055)}" fill="${seedC}" opacity="${F(op*0.85)}"/>`;
+  s+=`<path d="M${F(cx)} ${F(cy)} L${rand.map(q=>q[0]+' '+q[1]).join(' L')}Z"
+      fill="${cols[0]}" opacity="${F(op*0.45)}"/>`;
+
+  /* Die einzelnen Blütenblätter, von außen nach innen gezeichnet */
+  for(let i=0;i<anzahl;i++){
+    const aM=a0+(i+0.5)*schritt;
+    const hw=schritt/2*spalt;
+    /* mittlere Blätter etwas länger — das gibt dem Fächer seine Rundung */
+    const len=r*(0.88+0.12*Math.cos((aM-mitte)*1.15));
+    const rIn=r*0.10;
+    const A=PT(cx,cy,rIn,aM-hw*0.55);
+    const B=PT(cx,cy,len*0.90,aM-hw);
+    const C=PT(cx,cy,len*1.10,aM-hw*0.62);   // deutlich gewölbte Spitze
+    const D=PT(cx,cy,len*1.10,aM+hw*0.62);
+    const E=PT(cx,cy,len*0.90,aM+hw);
+    const G=PT(cx,cy,rIn,aM+hw*0.55);
+    /* Nur ein Hauch Unterschied zwischen den Blättern — die Riefen tragen
+       die Zeichnung, nicht ein Streifenmuster */
+    const col=cols[i%2?1:0];
+    s+=`<path class="petal" d="M${F(cx)} ${F(cy)} L${A[0]} ${A[1]} L${B[0]} ${B[1]}
+        Q ${C[0]} ${C[1]} ${F((C[0]+D[0])/2)} ${F((C[1]+D[1])/2)}
+        Q ${D[0]} ${D[1]} ${E[0]} ${E[1]} L${G[0]} ${G[1]}Z"
+        fill="${col}" opacity="${F(op*(0.95+0.05*(i%2)))}"/>`;
+    /* Trennlinie: gibt dem Fächer die feine Riefung wie bei einer Muschel */
+    const L1=PT(cx,cy,rIn*1.2,aM-hw), L2=PT(cx,cy,len*0.99,aM-hw);
+    s+=`<path d="M${L1[0]} ${L1[1]} L${L2[0]} ${L2[1]}" stroke="${cols[Math.min(2,cols.length-1)]}"
+        stroke-width="${F(r*0.022)}" fill="none" stroke-linecap="round" opacity="${F(op*0.75)}"/>`;
   }
-  return s;
+
+  /* Heller Schimmer über der unteren Hälfte, wie in der Vorlage */
+  const sch=[];
+  for(let t=0;t<=16;t++){
+    const aa=a0+spread*(t/16);
+    sch.push(PT(cx,cy,r*0.46,aa));
+  }
+  s+=`<path d="M${F(cx)} ${F(cy)} L${sch.map(q=>q[0]+' '+q[1]).join(' L')}Z"
+      fill="${cols[Math.min(3,cols.length-1)]}" opacity="${F(op*0.30)}"/>`;
+
+  /* Ansatz: der Punkt, aus dem alles aufsteigt */
+  s+=`<ellipse cx="${F(cx)}" cy="${F(cy)}" rx="${F(r*0.07)}" ry="${F(r*0.05)}"
+      fill="${seedC}" opacity="${F(op*0.55)}"/>`;
+  /* Die Vorlage ist breiter als hoch — das flache Stauchen macht aus dem
+     Halbkreis eine Muschel */
+  return `<g transform="translate(${F(cx)} ${F(cy)}) scale(1 0.84) translate(${F(-cx)} ${F(-cy)})">${s}</g>`;
 }
 
 /* Seitenknospe an einem kurzen Stiel */
@@ -740,8 +781,8 @@ function flowerSVG(g,size){
   const C   = hsl(hue, sat, lum);
   const C2  = hsl(hue, sat-6, lum+13);
   const C3  = hsl(hue+14, sat-10, lum+22);
-  const P1  = hsl(hue+30, Math.min(88,sat+10), lum+4);
-  const P2  = hsl(hue+46, Math.min(92,sat+14), lum+13);
+  const P1  = hsl(hue+34, Math.min(88,sat+10), lum+8);
+  const P2  = hsl(hue+44, Math.min(90,sat+12), lum+14);
   const P3  = hsl(hue+62, Math.min(94,sat+18), lum+22);
   const P4  = hsl(hue+78, Math.min(96,sat+20), lum+31);
   const GOLD= hsl(46, Math.min(94,sat+24), Math.min(72,lum+24));
@@ -826,17 +867,21 @@ function flowerSVG(g,size){
     </g>`;
   }
   if(phase===6||phase===7){
-    const r=(phase===7?37:26)*shrink;
-    const layers=phase===7?5:3;
-    const cols=phase===7?[P1,P2,P3,P4,P4]:[P1,P2,P3];
-    head=`<g class="head" style="transform-origin:${F(bx)}px ${F(by-4)}px">
-      ${peonyHead(bx,by-4,r,layers,cols,GOLD,op,phase===7?0.18:0)}
+    /* Phase 6 fächert halb auf, Phase 7 ganz — dieselbe Blüte, weiter geöffnet */
+    const r=(phase===7?46:32)*shrink;
+    const spread=phase===7?188:118;
+    const anzahl=phase===7?9:7;
+    const cols=[P1,P2,P3,P4];
+    /* Der Drehpunkt sitzt am Stängelende, der Fächer öffnet nach oben */
+    const py=by+r*0.30;
+    head=`<g class="head" style="transform-origin:${F(bx)}px ${F(py)}px">
+      ${fanBloom(bx,py,r,anzahl,spread,cols,GOLD,op)}
     </g>`;
-    /* Kelchblätter unter der Blüte */
-    head+=`<path d="M${F(bx-r*0.5)} ${F(by+r*0.34)} q ${F(r*0.5)} ${F(r*0.4)} ${F(r*1.0)} 0"
-      stroke="${C}" stroke-width="${F(2*shrink)}" fill="none" stroke-linecap="round" opacity="${F(op*0.8)}"/>`;
+    /* Kelchblätter unter dem Ansatz */
+    head+=`<path d="M${F(bx-r*0.34)} ${F(py+r*0.16)} q ${F(r*0.34)} ${F(r*0.30)} ${F(r*0.68)} 0"
+      stroke="${C}" stroke-width="${F(2*shrink)}" fill="none" stroke-linecap="round" opacity="${F(op*0.85)}"/>`;
     if(phase===7&&v>0.45){
-      const sp=[[-52,-30,2.4,P3],[48,-14,1.9,C3],[30,-54,2.2,GOLD],[-34,-58,1.6,P4],[58,-44,1.5,P2]];
+      const sp=[[-56,-18,2.4,P3],[52,-6,1.9,C3],[26,-46,2.2,GOLD],[-30,-50,1.6,P4],[60,-34,1.5,P2]];
       sparks=`<g opacity="${F(glow)}">`+sp.map(([dx,dy,rr,c],i)=>
         `<circle cx="${F(bx+dx)}" cy="${F(by+dy)}" r="${rr}" fill="${c}" class="pulse"
           style="animation-delay:${F(i*0.45)}s"/>`).join('')+`</g>`;
@@ -1093,6 +1138,12 @@ TXT.de.UI={
   active:'aktiv', primaryShort:'Primär', bloomed:'Erblüht',
   anotherGoal:'+ Weiteres Ziel', exportData:'Daten als Datei sichern',
   goodToKnow:'Gut zu wissen',
+  supportTitle:'Was diese App leisten kann — und was nicht',
+  supportP1:'Diese App ersetzt kein Coaching und keine Therapie. Sie kann ein professionelles '+
+    'Coaching begleiten und die Zeit zwischen den Terminen tragen. Mehr nicht — und nicht weniger.',
+  supportP2:'Wenn es dir ernsthaft schlecht geht, wenn du in einer Notlage steckst oder Angst dich '+
+    'festhält, dann braucht es einen Menschen, kein Programm. Bitte such dir professionelle Unterstützung.',
+  supportP3:'Für Fragen zur App bin ich da: Maria Schmidt, per Nachricht auf LinkedIn.',
   privacyNote:'Alles bleibt auf diesem Gerät. Es werden keine Daten übertragen, '+
     'es gibt kein Konto und keine Anmeldung. Auf dem Handy kannst du die Seite über '+
     '„Zum Home-Bildschirm hinzufügen“ wie eine App öffnen.',
@@ -1226,6 +1277,12 @@ TXT.en.UI={
   active:'active', primaryShort:'Primary', bloomed:'In bloom',
   anotherGoal:'+ Another goal', exportData:'Save data to a file',
   goodToKnow:'Good to know',
+  supportTitle:'What this app can do — and what it cannot',
+  supportP1:'This app is not a replacement for coaching or therapy. It can support professional '+
+    'coaching and carry you through the time between sessions. No more — and no less.',
+  supportP2:'If you are in real distress, in an emergency, or anxiety has hold of you, you need a '+
+    'person, not a program. Please reach out for professional support.',
+  supportP3:'For questions about the app I am here: Maria Schmidt, by message on LinkedIn.',
   privacyNote:'Everything stays on this device. No data is sent anywhere, '+
     'there is no account and no sign-up. On a phone you can use '+
     '"Add to Home Screen" to open it like an app.',
@@ -1528,6 +1585,12 @@ function viewGarden(){
     <div class="card mt">
       <h3 style="margin-bottom:8px">${W('goodToKnow')}</h3>
       <p class="small mut">${W('privacyNote')}</p>
+    </div>
+    <div class="card" style="border-color:rgba(167,125,255,.35)">
+      <h3 style="margin-bottom:8px">${W('supportTitle')}</h3>
+      <p class="small mut">${W('supportP1')}</p>
+      <p class="small mut" style="margin-top:8px"><b style="color:var(--coach)">${W('supportP2')}</b></p>
+      <p class="small mut" style="margin-top:8px">${W('supportP3')}</p>
     </div>
     <div class="card">
       <h3 style="margin-bottom:8px">${W('legend')}</h3>
