@@ -224,7 +224,10 @@ label{display:block;font-size:13px;color:var(--mut);margin:0 0 6px;font-weight:5
    nur der Bericht bleibt — hell, ruhig, ohne Bedienelemente. */
 #druck{display:none}
 @media print{
-  @page{margin:16mm 14mm}
+  /* Ohne Seitenrand druckt der Browser keine Kopf- und Fußzeile mit
+     Adresse und Datum. Der Abstand wandert nach innen. */
+  @page{margin:0;size:auto}
+  #druck{padding:15mm 14mm}
   html,body{background:#fff!important;color:#111!important}
   body{font-size:11pt;line-height:1.5;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Arial,sans-serif}
@@ -238,7 +241,9 @@ label{display:block;font-size:13px;color:var(--mut);margin:0 0 6px;font-weight:5
     border-bottom:1px solid #ccc;margin-bottom:18px;font-size:10.5pt;color:#333}
   .bz b{font-size:15pt;color:#111;margin-right:3px}
   .bg{break-inside:avoid;page-break-inside:avoid;margin-bottom:22px;
-    border:1px solid #ddd;border-radius:6px;padding:13px 15px}
+    border:1px solid #ddd;border-radius:6px;padding:13px 15px;
+    /* Landet eine Karte oben auf einer neuen Seite, braucht sie Luft */
+    margin-top:4mm}
   .bgk{display:flex;gap:14px;align-items:flex-start}
   .bgb{flex:0 0 98px}
   .bgb svg{width:98px;height:auto;display:block}
@@ -1209,6 +1214,8 @@ TXT.de.UI={
   pdfIntro:'Ein lesbarer Überblick zum Ausdrucken oder Aufheben.',
   pdfHint:'Es öffnet sich das Druckfenster deines Geräts. Wähle dort „Als PDF speichern" '+
     'statt eines Druckers. Am Handy heißt es oft „In Dateien sichern".',
+  pdfHint2:'Sollten oben Adresse und Datum erscheinen: Im Druckfenster unter „Weitere Einstellungen" '+
+    'den Haken bei „Kopf- und Fußzeilen" entfernen.',
   pdfGo:'Druckfenster öffnen',
   pdfSummary:'Überblick', pdfGoals:'Ziele', pdfActive:'davon aktiv',
   pdfStepsDone:'Schritte erledigt', pdfPointsEarned:'Wachstumspunkte',
@@ -1373,6 +1380,8 @@ TXT.en.UI={
   pdfIntro:'A readable overview to print or keep.',
   pdfHint:'Your device\'s print dialog will open. Choose "Save as PDF" instead of a printer. '+
     'On a phone it is often called "Save to Files".',
+  pdfHint2:'If an address and date appear at the top: in the print dialog under "More settings", '+
+    'uncheck "Headers and footers".',
   pdfGo:'Open the print dialog',
   pdfSummary:'Overview', pdfGoals:'goals', pdfActive:'of them active',
   pdfStepsDone:'steps completed', pdfPointsEarned:'growth points',
@@ -2609,6 +2618,7 @@ function pdfSheet(){
   sheet(`<h2>${W('pdfBtn')}</h2>
     <p class="small mut" style="margin:6px 0 12px">${W('pdfIntro')}</p>
     <p class="small mut">${W('pdfHint')}</p>
+    <p class="small mut mt">${W('pdfHint2')}</p>
     <button class="btn pri mt" data-doprint="1">${W('pdfGo')}</button>
     <button class="btn sm gh mt" style="width:100%" data-closesheet="1">${W('cancel')}</button>`);
 }
