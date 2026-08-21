@@ -219,6 +219,52 @@ label{display:block;font-size:13px;color:var(--mut);margin:0 0 6px;font-weight:5
 .area.on{border-color:var(--ah2);background:rgba(255,255,255,.06);
   box-shadow:0 0 20px -8px var(--ah2)}
 
+/* ---------- Druckansicht für das PDF ----------
+   Auf dem Bildschirm unsichtbar. Beim Drucken verschwindet die App und
+   nur der Bericht bleibt — hell, ruhig, ohne Bedienelemente. */
+#druck{display:none}
+@media print{
+  @page{margin:16mm 14mm}
+  html,body{background:#fff!important;color:#111!important}
+  body{font-size:11pt;line-height:1.5;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Arial,sans-serif}
+  .wrap,.tabs,.sheet,.toast{display:none!important}
+  #druck{display:block!important;max-width:none}
+  #druck *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .bk{border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:14px}
+  .bk h1{font-size:20pt;margin:0;color:#111}
+  .bk .unter{font-size:10pt;color:#555;margin-top:3px}
+  .bz{display:flex;gap:22px;flex-wrap:wrap;padding:9px 0 14px;
+    border-bottom:1px solid #ccc;margin-bottom:18px;font-size:10.5pt;color:#333}
+  .bz b{font-size:15pt;color:#111;margin-right:3px}
+  .bg{break-inside:avoid;page-break-inside:avoid;margin-bottom:22px;
+    border:1px solid #ddd;border-radius:6px;padding:13px 15px}
+  .bgk{display:flex;gap:14px;align-items:flex-start}
+  .bgb{flex:0 0 98px}
+  .bgb svg{width:98px;height:auto;display:block}
+  .bgt{flex:1}
+  .bg h2{font-size:14pt;margin:0 0 2px;color:#111}
+  .bg h3{font-size:10.5pt;margin:12px 0 5px;color:#333;
+    text-transform:uppercase;letter-spacing:.06em}
+  .pill{font-size:8.5pt;background:#111;color:#fff;padding:1px 7px;
+    border-radius:99px;vertical-align:middle}
+  .klein{font-size:9.5pt;color:#666}
+  .bw{border-collapse:collapse;margin-top:6px;font-size:10.5pt}
+  .bw td{padding:1px 12px 1px 0;color:#333;vertical-align:top}
+  .bf{font-size:10.5pt;margin:9px 0 0;color:#222}
+  .bf b{font-size:9pt;text-transform:uppercase;letter-spacing:.05em;color:#666}
+  .bl{list-style:none;padding:0;margin:0}
+  .bl li{display:flex;gap:8px;align-items:flex-start;padding:2.5px 0;font-size:10.5pt}
+  .bl li.fertig{color:#666}
+  .kasten{flex:0 0 11px;width:11px;height:11px;border:1px solid #888;border-radius:2px;
+    margin-top:3.5px;display:inline-block;overflow:hidden}
+  .fertig .kasten{background:#444;border-color:#444}
+  .bfu{margin-top:20px;padding-top:9px;border-top:1px solid #ccc;
+    font-size:9pt;color:#777}
+}
+/* Beim Drucken vom Handy zusätzlich absichern */
+body.druckt .wrap,body.druckt .tabs{visibility:hidden}
+
 .steps{display:flex;gap:5px;margin-bottom:16px}
 .steps i{flex:1;height:3px;border-radius:99px;background:var(--line)}
 .steps i.on{background:var(--grow)}
@@ -227,6 +273,7 @@ label{display:block;font-size:13px;color:var(--mut);margin:0 0 6px;font-weight:5
 </head>
 <body>
 <div class="wrap" id="app"></div>
+<div id="druck" aria-hidden="true"></div>
 <nav class="tabs"><div class="inner" id="nav"></div></nav>
 <script>
 /* ==========================================================================
@@ -1131,7 +1178,7 @@ TXT.de.UI={
   mostEffective:'Wirksamste Aktion:',
   addStep:'+ Schritt hinzufügen', newStep:'+ Neuer Schritt',
   sizeSmall:'Klein', sizeNormal:'Normal', sizeBig:'Kraftvoll',
-  points:'Punkte', markDone:'Als erledigt abhaken',
+  points:'Punkte', pointSg:'Punkt', markDone:'Als erledigt abhaken',
   goalsNeedCare:'Ziele, die Pflege brauchen',
   daysNoStep:'Tage ohne Schritt',
   garden:'Blumengarten', noGoalsYet:'Noch keine Ziele.', plantGoal:'Ziel pflanzen',
@@ -1140,10 +1187,35 @@ TXT.de.UI={
   goodToKnow:'Gut zu wissen',
   supportTitle:'Was diese App leisten kann — und was nicht',
   supportP1:'Diese App ersetzt kein Coaching und keine Therapie. Sie kann ein professionelles '+
-    'Coaching begleiten und die Zeit zwischen den Terminen tragen. Mehr nicht — und nicht weniger.',
+    'Coaching begleiten und die Zeit zwischen den Terminen tragen.',
   supportP2:'Wenn es dir ernsthaft schlecht geht, wenn du in einer Notlage steckst oder Angst dich '+
     'festhält, dann braucht es einen Menschen, kein Programm. Bitte such dir professionelle Unterstützung.',
   supportP3:'Für Fragen zur App bin ich da: Maria Schmidt, per Nachricht auf LinkedIn.',
+  saveTitle:'Daten sichern', saveIntro:'Deine Ziele liegen nur in diesem Browser. '+
+    'Sicher sie regelmäßig — vor allem, bevor du den Browser aufräumst oder das Gerät wechselst.',
+  saveDownload:'Als Datei herunterladen', saveCopy:'Text kopieren',
+  saveManual:'Falls der Knopf nichts tut: Text unten markieren, kopieren und irgendwo einfügen — '+
+    'in eine Notiz, eine E-Mail an dich selbst, egal wohin. Der Text ist die Sicherung.',
+  saveCopied:'Text kopiert', restoreTitle:'Daten zurückholen',
+  restoreIntro:'Füge hier einen gesicherten Text ein oder wähle eine Datei. '+
+    'Achtung: Der jetzige Stand wird dabei ersetzt.',
+  restoreFile:'Datei wählen', restorePaste:'Oder Text hier einfügen',
+  restoreBtn:'Zurückholen', restoreOk:'Daten zurückgeholt',
+  restoreBad:'Der Text ist keine gültige Sicherung.',
+  restoreEmpty:'Bitte erst einen Text einfügen oder eine Datei wählen.',
+  restoreConfirm:'Ersetzt deinen jetzigen Stand:', goalsWord:'Ziele', stepsWord:'Schritte',
+  close:'Schließen', restoreOpen:'Daten zurückholen',
+  pdfBtn:'Als PDF speichern', pdfTitle:'Meine Ziele',
+  pdfIntro:'Ein lesbarer Überblick zum Ausdrucken oder Aufheben.',
+  pdfHint:'Es öffnet sich das Druckfenster deines Geräts. Wähle dort „Als PDF speichern" '+
+    'statt eines Druckers. Am Handy heißt es oft „In Dateien sichern".',
+  pdfGo:'Druckfenster öffnen',
+  pdfSummary:'Überblick', pdfGoals:'Ziele', pdfActive:'davon aktiv',
+  pdfStepsDone:'Schritte erledigt', pdfPointsEarned:'Wachstumspunkte',
+  pdfCreated:'Erstellt am', pdfNoGoals:'Noch keine Ziele angelegt.',
+  pdfOpen:'Offene Schritte', pdfDone:'Erledigt', pdfNothing:'Keine Schritte.',
+  pdfFooter:'BloomGoal Coach · Alle Daten bleiben auf deinem Gerät.',
+  backupBtn:'Sicherungsdatei (zum Zurückholen)',
   privacyNote:'Alles bleibt auf diesem Gerät. Es werden keine Daten übertragen, '+
     'es gibt kein Konto und keine Anmeldung. Auf dem Handy kannst du die Seite über '+
     '„Zum Home-Bildschirm hinzufügen“ wie eine App öffnen.',
@@ -1270,7 +1342,7 @@ TXT.en.UI={
   mostEffective:'Most effective action:',
   addStep:'+ Add a step', newStep:'+ New step',
   sizeSmall:'Small', sizeNormal:'Regular', sizeBig:'Powerful',
-  points:'points', markDone:'Mark as done',
+  points:'points', pointSg:'point', markDone:'Mark as done',
   goalsNeedCare:'Goals that need care',
   daysNoStep:'days without a step',
   garden:'Flower garden', noGoalsYet:'No goals yet.', plantGoal:'Plant a goal',
@@ -1283,6 +1355,31 @@ TXT.en.UI={
   supportP2:'If you are in real distress, in an emergency, or anxiety has hold of you, you need a '+
     'person, not a program. Please reach out for professional support.',
   supportP3:'For questions about the app I am here: Maria Schmidt, by message on LinkedIn.',
+  saveTitle:'Save your data', saveIntro:'Your goals live in this browser only. '+
+    'Save them regularly — especially before clearing your browser or switching devices.',
+  saveDownload:'Download as a file', saveCopy:'Copy the text',
+  saveManual:'If the button does nothing: select the text below, copy it and paste it anywhere — '+
+    'a note, an email to yourself, wherever. The text is the backup.',
+  saveCopied:'Text copied', restoreTitle:'Restore your data',
+  restoreIntro:'Paste a saved text here or choose a file. '+
+    'Careful: this replaces what you have now.',
+  restoreFile:'Choose a file', restorePaste:'Or paste the text here',
+  restoreBtn:'Restore', restoreOk:'Data restored',
+  restoreBad:'That text is not a valid backup.',
+  restoreEmpty:'Paste a text or choose a file first.',
+  restoreConfirm:'This replaces your current data:', goalsWord:'goals', stepsWord:'steps',
+  close:'Close', restoreOpen:'Restore data',
+  pdfBtn:'Save as PDF', pdfTitle:'My goals',
+  pdfIntro:'A readable overview to print or keep.',
+  pdfHint:'Your device\'s print dialog will open. Choose "Save as PDF" instead of a printer. '+
+    'On a phone it is often called "Save to Files".',
+  pdfGo:'Open the print dialog',
+  pdfSummary:'Overview', pdfGoals:'goals', pdfActive:'of them active',
+  pdfStepsDone:'steps completed', pdfPointsEarned:'growth points',
+  pdfCreated:'Created on', pdfNoGoals:'No goals yet.',
+  pdfOpen:'Open steps', pdfDone:'Completed', pdfNothing:'No steps.',
+  pdfFooter:'BloomGoal Coach · All data stays on your device.',
+  backupBtn:'Backup file (for restoring)',
   privacyNote:'Everything stays on this device. No data is sent anywhere, '+
     'there is no account and no sign-up. On a phone you can use '+
     '"Add to Home Screen" to open it like an app.',
@@ -1396,6 +1493,8 @@ TXT.en.UI={
   stepDominates2:'of the whole goal. Fewer points or fewer repetitions let the flower grow visibly.'
 };
 const W=k=>{const v=T().UI[k]; return v==null?k:v;};
+/* Ein Punkt, zwei Punkte — die Einzahl fällt sonst unangenehm auf */
+const punkte=n=>n+' '+(n===1?W('pointSg'):W('points'));
 
 /* ==========================================================================
    UI — Router und Hilfsfunktionen
@@ -1470,7 +1569,8 @@ function statsBlock(g){
 }
 function stateChip(g){
   const cls=g.vitality>=60?'vit-c':(g.vitality>=40?'':'warn');
-  return `<span class="chip ${cls}">${STATE_LABEL[g.flower_state]}</span>`;
+  /* Aus der Vitalität gerechnet — ein fehlendes Feld darf nicht „undefined" zeigen */
+  return `<span class="chip ${cls}">${STATE_LABEL[calculateFlowerState(g.vitality)]}</span>`;
 }
 
 /* ==========================================================================
@@ -1489,6 +1589,7 @@ function viewDash(){
         <p class="mut small mt">${COACH.noGoals}</p>
         <button class="btn pri mt" data-go="new">${W('plantFirst')}</button>
         <button class="btn gh sm mt" data-demo="1">${W('loadDemo')}</button>
+        <button class="btn gh sm mt" data-import="1">${W('restoreOpen')}</button>
       </div>`;
   }
 
@@ -1504,7 +1605,7 @@ function viewDash(){
       <button class="grow" style="text-align:left" data-toggle="${t.task_id}">
         <span class="chip ${accent==='var(--line)'?'':'grow-c'}" style="margin-bottom:4px">${label}</span>
         <span class="tt" style="display:block">${esc(t.title)}</span>
-        <span class="small mut" style="display:block">+${t.points} ${W('points')} · +${TASK_TYPE[typeOf(t)].vitality} ${W('vitality')}${
+        <span class="small mut" style="display:block">+${punkte(t.points)} · +${TASK_TYPE[typeOf(t)].vitality} ${W('vitality')}${
           repeatOf(t)==='once'?'':' · '+repShort(repeatOf(t))+' '+doneCount(t)+'/'+repeatTotal(t)}</span>
       </button>
     </div>`:'';
@@ -1558,7 +1659,10 @@ function viewDash(){
    ========================================================================== */
 function viewGarden(){
   if(!DB.goals.length) return `<h1>${W('garden')}</h1>
-    <div class="empty">${W('noGoalsYet')}<br><button class="btn pri mt" data-go="new">${W('plantGoal')}</button></div>`;
+    <div class="empty">${W('noGoalsYet')}<br>
+      <button class="btn pri mt" data-go="new">${W('plantGoal')}</button>
+      <button class="btn sm gh mt" style="width:100%" data-import="1">${W('restoreOpen')}</button>
+    </div>`;
 
   const sorted=DB.goals.slice().sort((a,b)=>
     (b.is_primary?1:0)-(a.is_primary?1:0) ||
@@ -1581,7 +1685,9 @@ function viewGarden(){
         </button>`).join('')}
     </div>
     <button class="btn gh mt" data-go="new">${W('anotherGoal')}</button>
-    <button class="btn sm gh mt" style="width:100%" data-export="1">${W('exportData')}</button>
+    <button class="btn mt" style="width:100%" data-pdf="1">${W('pdfBtn')}</button>
+    <button class="btn sm gh mt" style="width:100%" data-export="1">${W('backupBtn')}</button>
+    <button class="btn sm gh mt" style="width:100%" data-import="1">${W('restoreOpen')}</button>
     <div class="card mt">
       <h3 style="margin-bottom:8px">${W('goodToKnow')}</h3>
       <p class="small mut">${W('privacyNote')}</p>
@@ -1624,7 +1730,7 @@ function viewGoal(id){
       <button class="grow" style="text-align:left" data-edittask="${t.task_id}">
         <span class="tt">${esc(t.title)}</span>
         <span class="small mut" style="display:block;margin-top:2px">
-          ${t.points} ${W('points')}${reihe}${heute?' · '+W('doneToday'):''}
+          ${punkte(t.points)}${reihe}${heute?' · '+W('doneToday'):''}
           ${anteil>=40?`<b style="color:var(--win)"> · ${anteil}% ${W('shareOfGoal').toLowerCase()}</b>`:''}
         </span>
         ${r==='once'?'':`<span class="bar g" style="margin-top:6px;height:5px">
@@ -1835,7 +1941,7 @@ function viewCheckin(){
           <button class="grow" style="text-align:left" data-toggle="${t.task_id}">
             <span class="tt">${esc(t.title)}</span>
             <span class="small mut" style="display:block;margin-top:2px">
-              ${t.points} ${W('points')} · +${TASK_TYPE[typeOf(t)].vitality} ${W('vitality')}${
+              ${punkte(t.points)} · +${TASK_TYPE[typeOf(t)].vitality} ${W('vitality')}${
               r==='once'?'':' · '+repShort(r)+' '+doneCount(t)+' '+W('ofDone')+' '+repeatTotal(t)}
             </span>
           </button>
@@ -2431,17 +2537,172 @@ window.addEventListener('error',ev=>{ showError(ev.error||ev.message,'Laufzeit')
 window.addEventListener('unhandledrejection',ev=>{ showError(ev.reason,'Hintergrund'); });
 
 /* Daten sichern: reine Textdatei, funktioniert ohne Server */
-function exportData(){
+/* ==========================================================================
+   BERICHT ALS PDF
+   Kein Zusatzprogramm: Die App baut eine saubere, helle Druckansicht und
+   öffnet das Druckfenster des Geräts. Dort wählt man „Als PDF speichern".
+   Das funktioniert auf Rechner und Handy gleichermaßen und erzeugt ein
+   Dokument, das jeder lesen kann — anders als die technische Sicherungsdatei.
+   ========================================================================== */
+function berichtHTML(){
+  const alle=DB.goals.slice().sort((a,b)=>
+    (b.is_primary?1:0)-(a.is_primary?1:0) ||
+    b.progress_percent-a.progress_percent);
+  const aktiv=activeGoals().length;
+  const getan=DB.tasks.reduce((a,t)=>a+doneCount(t),0);
+  const summePunkte=DB.goals.reduce((a,g)=>a+g.completed_points,0);
+  const datum=new Date().toLocaleDateString(locale(),
+    {weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  const schritt=t=>{
+    const r=repeatOf(t), fertig=doneCount(t)>=repeatTotal(t);
+    const reihe=r==='once'?'':` · ${repShort(r)} ${doneCount(t)}/${repeatTotal(t)}`;
+    return `<li class="${fertig?'fertig':''}">
+      <span class="kasten"></span>
+      <span>${esc(t.title)}<span class="klein"> — ${punkte(t.points)}${reihe}</span></span>
+    </li>`;
+  };
+
+  return `
+  <div class="bk">
+    <h1>${W('pdfTitle')}</h1>
+    <p class="unter">${W('pdfCreated')} ${datum}</p>
+  </div>
+
+  <div class="bz">
+    <div><b>${DB.goals.length}</b> ${W('pdfGoals')}<span class="klein"> (${aktiv} ${W('pdfActive')})</span></div>
+    <div><b>${getan}</b> ${W('pdfStepsDone')}</div>
+    <div><b>${summePunkte}</b> ${W('pdfPointsEarned')}</div>
+  </div>
+
+  ${alle.length?alle.map(g=>{
+    const ts=goalTasks(g.goal_id);
+    const offen=ts.filter(t=>doneCount(t)<repeatTotal(t));
+    const fertig=ts.filter(t=>doneCount(t)>=repeatTotal(t));
+    return `<section class="bg">
+      <div class="bgk">
+        <div class="bgb">${flowerSVG(g,98)}</div>
+        <div class="bgt">
+          <h2>${esc(g.title)}${g.is_primary?` <span class="pill">${W('primaryShort')}</span>`:''}</h2>
+          <p class="klein">${esc(areaLabel(g.life_area))} · ${PHASE_LABEL[g.flower_phase]}</p>
+          <table class="bw">
+            <tr><td>${W('growth')}</td><td><b>${Math.round(g.progress_percent)} %</b>
+              <span class="klein">(${g.completed_points} ${W('ofPoints')} ${g.total_points})</span></td></tr>
+            <tr><td>${W('vitality')}</td><td><b>${Math.round(g.vitality)} %</b>
+              <span class="klein">${STATE_LABEL[calculateFlowerState(g.vitality)]}</span></td></tr>
+            ${g.target_date?`<tr><td>${W('targetDate')}</td><td>${new Date(g.target_date).toLocaleDateString(locale())}</td></tr>`:''}
+          </table>
+        </div>
+      </div>
+      ${g.success_criteria?`<p class="bf"><b>${W('resultLbl')}</b><br>${esc(g.success_criteria)}</p>`:''}
+      ${g.purpose?`<p class="bf"><b>${W('purposeLbl')}</b><br>${esc(g.purpose)}</p>`:''}
+      ${offen.length?`<h3>${W('pdfOpen')} (${offen.length})</h3><ul class="bl">${offen.map(schritt).join('')}</ul>`:''}
+      ${fertig.length?`<h3>${W('pdfDone')} (${fertig.length})</h3><ul class="bl">${fertig.map(schritt).join('')}</ul>`:''}
+      ${!ts.length?`<p class="klein">${W('pdfNothing')}</p>`:''}
+    </section>`;
+  }).join(''):`<p>${W('pdfNoGoals')}</p>`}
+
+  <p class="bfu">${W('pdfFooter')}</p>`;
+}
+
+function pdfSheet(){
+  sheet(`<h2>${W('pdfBtn')}</h2>
+    <p class="small mut" style="margin:6px 0 12px">${W('pdfIntro')}</p>
+    <p class="small mut">${W('pdfHint')}</p>
+    <button class="btn pri mt" data-doprint="1">${W('pdfGo')}</button>
+    <button class="btn sm gh mt" style="width:100%" data-closesheet="1">${W('cancel')}</button>`);
+}
+
+function drucken(){
   try{
-    const txt=JSON.stringify(DB,null,2);
-    const blob=new Blob([txt],{type:'application/json'});
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download='bloomgoal-daten-'+todayISO()+'.json';
-    document.body.appendChild(a); a.click();
-    setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},1000);
-    toast(W('dataSaved'));
+    const ziel=$('druck');
+    if(!ziel){ toast(W('copyFailed')); return; }
+    ziel.innerHTML=berichtHTML();
+    closeSheet();
+    document.body.classList.add('druckt');
+    setTimeout(()=>{
+      try{ window.print(); }catch(e){ toast(W('copyFailed')+' '+e.message); }
+      setTimeout(()=>{ document.body.classList.remove('druckt'); ziel.innerHTML=''; },800);
+    },60);
   }catch(e){ toast(W('copyFailed')+' '+e.message); }
+}
+
+/* Sichern: Der automatische Download wird auf Handys häufig stillschweigend
+   unterbunden. Deshalb zeigt die App den Text zusätzlich zum Herunterladen und
+   zum Kopieren an — mindestens einer der drei Wege funktioniert überall. */
+function exportData(){
+  let txt='';
+  try{ txt=JSON.stringify(DB,null,2); }
+  catch(e){ toast(W('copyFailed')+' '+e.message); return; }
+  const name='bloomgoal-'+todayISO()+'.json';
+  let href='';
+  try{ href=URL.createObjectURL(new Blob([txt],{type:'application/json'})); }
+  catch(e){ href='data:application/json;charset=utf-8,'+encodeURIComponent(txt); }
+  sheet(`<h2>${W('saveTitle')}</h2>
+    <p class="small mut" style="margin:6px 0 14px">${W('saveIntro')}</p>
+    <a class="btn pri" href="${href}" download="${name}"
+       style="text-decoration:none">${W('saveDownload')}</a>
+    <button class="btn sm mt" style="width:100%" data-copydata="1">${W('saveCopy')}</button>
+    <p class="small mut mt">${W('saveManual')}</p>
+    <textarea id="s-data" readonly style="min-height:150px;margin-top:8px;
+      font-family:ui-monospace,monospace;font-size:12px">${esc(txt)}</textarea>
+    <button class="btn sm gh mt" style="width:100%" data-closesheet="1">${W('close')}</button>`);
+  setTimeout(()=>{const t=$('s-data'); if(t){t.focus();try{t.setSelectionRange(0,0);}catch(e){}}},60);
+}
+
+/* Zurückholen: aus Datei oder eingefügtem Text */
+function importSheet(){
+  sheet(`<h2>${W('restoreTitle')}</h2>
+    <p class="small mut" style="margin:6px 0 14px">${W('restoreIntro')}</p>
+    <label>${W('restoreFile')}</label>
+    <input type="file" id="s-file" accept="application/json,.json,text/plain">
+    <label class="mt">${W('restorePaste')}</label>
+    <textarea id="s-import" placeholder='{"goals":[…]}' style="min-height:130px;
+      font-family:ui-monospace,monospace;font-size:12px"></textarea>
+    <p class="small mut mt" id="s-vorschau"></p>
+    <button class="btn pri mt" data-doimport="1">${W('restoreBtn')}</button>
+    <button class="btn sm gh mt" style="width:100%" data-closesheet="1">${W('cancel')}</button>`);
+  const f=$('s-file');
+  if(f) f.addEventListener('change',()=>{
+    const datei=f.files&&f.files[0]; if(!datei)return;
+    const leser=new FileReader();
+    leser.onload=()=>{ const t=$('s-import'); if(t){t.value=String(leser.result||''); vorschauZeigen();} };
+    leser.readAsText(datei);
+  });
+  const t=$('s-import');
+  if(t) t.addEventListener('input',vorschauZeigen);
+}
+/* Zeigt vor dem Zurückholen, was in der Sicherung steckt */
+function vorschauZeigen(){
+  const t=$('s-import'), v=$('s-vorschau');
+  if(!t||!v)return;
+  const o=sicherungLesen(t.value);
+  v.innerHTML = o
+    ? `<b style="color:var(--win)">${W('restoreConfirm')}</b> ${o.goals.length} ${W('goalsWord')}, ${o.tasks.length} ${W('stepsWord')}`
+    : (t.value.trim() ? `<b style="color:var(--danger)">${W('restoreBad')}</b>` : '');
+}
+/* Prüft, ob ein Text eine brauchbare Sicherung ist */
+function sicherungLesen(txt){
+  try{
+    const o=JSON.parse(String(txt||''));
+    if(!o||typeof o!=='object')return null;
+    if(!Array.isArray(o.goals)||!Array.isArray(o.tasks))return null;
+    return {goals:o.goals,tasks:o.tasks,
+            checkins:Array.isArray(o.checkins)?o.checkins:[],
+            events:Array.isArray(o.events)?o.events:[],
+            name:typeof o.name==='string'?o.name:'',
+            lang:(o.lang==='en'||o.lang==='de')?o.lang:null};
+  }catch(e){ return null; }
+}
+function importData(){
+  const t=$('s-import');
+  if(!t||!t.value.trim()){ toast(W('restoreEmpty')); return; }
+  const o=sicherungLesen(t.value);
+  if(!o){ toast(W('restoreBad')); return; }
+  DB.goals=o.goals; DB.tasks=o.tasks; DB.checkins=o.checkins; DB.events=o.events;
+  DB.name=o.name; if(o.lang)DB.lang=o.lang;
+  repariereStand();
+  save(); closeSheet(); toast(W('restoreOk')); go('garden');
 }
 
 /* ==========================================================================
@@ -2456,9 +2717,11 @@ function handleClick(e){
   const el=e.target.closest('[data-go],[data-goal],[data-toggle],[data-deltask],[data-addtask],'+
     '[data-primary],[data-pause],[data-delgoal],[data-editgoal],[data-step],[data-nw],[data-ci],'+
     '[data-addnew],[data-sugg],[data-rmnew],[data-cancelnew],[data-savetask],[data-quickadd],'+
-    '[data-savecheckin],[data-cigoal],[data-cisize],[data-cig],[data-closesheet],[data-demo],[data-area],[data-pts],'+
+    '[data-cigoal],[data-cisize],[data-cig],[data-closesheet],[data-demo],[data-area],[data-pts],'+
     '[data-edittask],[data-updatetask],[data-editnew],[data-canceledit],'+
-    '[data-rep],[data-repn],[data-copytask],[data-lang]');
+    '[data-rep],[data-repn],[data-copytask],[data-lang],'+
+    '[data-export],[data-copyerr],[data-import],[data-doimport],[data-copydata],'+
+    '[data-pdf],[data-doprint]');
   if(!el)return;
   const d=el.dataset;
 
@@ -2637,7 +2900,23 @@ function handleClick(e){
   if(d.cisize){ CI.groesse=d.cisize; render(); return; }
   if(d.closesheet){ closeSheet(); render(); return; }
   if(d.demo){ loadDemo(); return; }
+  if(d.pdf){ pdfSheet(); return; }
+  if(d.doprint){ drucken(); return; }
   if(d.export){ exportData(); return; }
+  if(d.import){ importSheet(); return; }
+  if(d.doimport){ importData(); return; }
+  if(d.copydata){
+    const t=$('s-data'); if(!t)return;
+    let ok=false;
+    try{ t.select(); t.setSelectionRange(0,999999); ok=document.execCommand&&document.execCommand('copy'); }catch(e){}
+    if(!ok && navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t.value).then(()=>toast(W('saveCopied')),
+        ()=>toast(W('copyNotAllowed')));
+      return;
+    }
+    toast(ok?W('saveCopied'):W('copyNotAllowed'));
+    return;
+  }
   if(d.copyerr){
     const txt=JSON.stringify(LAST_ERROR&&{
       meldung:String(LAST_ERROR.err&&LAST_ERROR.err.message||LAST_ERROR.err),
@@ -2756,19 +3035,19 @@ function loadDemo(){
 /* ==========================================================================
    Start
    ========================================================================== */
-try{
-  load();
-  /* Sprache: gespeicherte Wahl, sonst die des Browsers */
-  LANG = (DB.lang==='en'||DB.lang==='de') ? DB.lang : detectLang();
-  try{ document.documentElement.setAttribute('lang',LANG); }catch(e){}
-  /* Gespeicherte Stände reparieren: fehlende Felder ergänzen, unbrauchbare
-     Werte durch sinnvolle ersetzen. Ein beschädigter Eintrag darf die App
-     nicht in den Fehlerbildschirm zwingen. */
+/* Reparatur eines Datenstands — beim Start und beim Zurückholen einer Sicherung.
+   Fehlende Felder werden ergänzt, unbrauchbare Werte durch sinnvolle ersetzt.
+   Ein beschädigter Eintrag darf die App nicht in den Fehlerbildschirm zwingen. */
+function repariereStand(){
   const zahl=(w,ersatz,min,max)=>{
     const n=typeof w==='number'?w:parseFloat(w);
     if(!isFinite(n))return ersatz;
     return Math.max(min,Math.min(max,n));
   };
+  DB.goals=Array.isArray(DB.goals)?DB.goals.filter(g=>g&&g.goal_id):[];
+  DB.tasks=Array.isArray(DB.tasks)?DB.tasks.filter(t=>t&&t.task_id&&DB.goals.some(g=>g.goal_id===t.goal_id)):[];
+  if(!Array.isArray(DB.checkins))DB.checkins=[];
+  if(!Array.isArray(DB.events))DB.events=[];
   DB.goals.forEach(g=>{
     g.title=String(g.title==null?'':g.title);
     ['description','purpose','success_criteria'].forEach(k=>{
@@ -2788,6 +3067,7 @@ try{
     g.total_points    = zahl(g.total_points,0,0,1e9);
     g.progress_percent= zahl(g.progress_percent,0,0,100);
     g.flower_phase    = Math.round(zahl(g.flower_phase,1,1,7));
+    g.flower_state    = calculateFlowerState(g.vitality);
     g.is_primary      = !!g.is_primary;
   });
   DB.tasks.forEach(t=>{
@@ -2806,8 +3086,17 @@ try{
   runDailyCheck();
   DB.goals.forEach(recalcGoal);
   if(DB.goals.length && !DB.goals.some(g=>g.is_primary&&g.status==='active')){
-    const f=activeGoals()[0]; if(f)f.is_primary=true; save();
+    const f=activeGoals()[0]; if(f)f.is_primary=true;
   }
+}
+
+try{
+  load();
+  /* Sprache: gespeicherte Wahl, sonst die des Browsers */
+  LANG = (DB.lang==='en'||DB.lang==='de') ? DB.lang : detectLang();
+  try{ document.documentElement.setAttribute('lang',LANG); }catch(e){}
+  repariereStand();
+  save();
   const heute=checkinFor(null);
   if(heute){ CI.energy=heute.energy||0; CI.mood=heute.mood||0; }
   render();
