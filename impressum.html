@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Impressum — BloomGoal</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#08201c">
+<style>
+:root{
+  --bg:#071612; --bg2:#0b201a; --karte:rgba(255,255,255,.045);
+  --txt:#e9f4ef; --mut:#93b3a7; --line:rgba(255,255,255,.10);
+  --gruen:#2fd28c; --tuerkis:#22c3b4; --gold:#f0b95a;
+  --orange:#f7a24b; --orange2:#e8813a;
+  --nacht:#04100d;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:
+    radial-gradient(1100px 620px at 50% -6%, rgba(34,195,180,.30) 0%, transparent 64%),
+    radial-gradient(820px 560px at 8% 24%, rgba(47,210,140,.20) 0%, transparent 62%),
+    radial-gradient(760px 520px at 96% 42%, rgba(24,140,150,.22) 0%, transparent 60%),
+    linear-gradient(168deg, #0c2b26 0%, #08201c 42%, #061512 74%, #050f0d 100%);
+  background-attachment:fixed;
+  color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+  font-size:17px; line-height:1.65; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:760px;margin:0 auto;padding:20px 20px 60px}
+h1,h2,h3{margin:0;font-weight:640;letter-spacing:-.022em;line-height:1.22}
+h1{font-size:clamp(30px,6.4vw,46px)}
+h2{font-size:clamp(20px,3.6vw,25px)}
+p{margin:0}
+a{color:inherit}
+
+/* ---- Kopfzeile ---- */
+.kopf{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:6px 0 26px}
+.marke{display:flex;align-items:center;gap:9px;font-weight:700;font-size:17px;letter-spacing:-.01em}
+.marke i{width:26px;height:26px;border-radius:9px;display:block;flex:0 0 26px;
+  background:linear-gradient(140deg,var(--orange),var(--orange2));
+  box-shadow:0 2px 8px -3px rgba(214,120,38,.55)}
+.langsw{display:inline-flex;gap:2px;background:rgba(255,255,255,.06);border:1px solid var(--line);
+  border-radius:11px;padding:2px}
+.langsw button{border:0;background:none;font-family:inherit;cursor:pointer;
+  padding:6px 11px;border-radius:9px;font-size:12.5px;font-weight:700;color:var(--mut)}
+.langsw button.on{background:var(--gruen);color:#04231a}
+
+/* ---- Blume als Knopf ---- */
+.buehne{text-align:center;margin:6px 0 34px}
+.blume{
+  display:block;width:min(340px,84vw);aspect-ratio:160/200;margin:0 auto;
+  border:0;padding:0;background:none;cursor:pointer;position:relative;
+  transition:transform .35s cubic-bezier(.2,.8,.2,1),filter .35s;
+  filter:drop-shadow(0 20px 40px rgba(0,0,0,.45));
+}
+.blume svg{width:100%;height:100%;display:block;overflow:visible}
+.blume:hover,.blume:focus-visible{transform:translateY(-6px) scale(1.035);
+  filter:drop-shadow(0 26px 50px rgba(34,195,180,.35))}
+.blume:active{transform:translateY(-2px) scale(1.01)}
+.blume:focus-visible{outline:3px solid var(--gruen);outline-offset:14px;border-radius:26px}
+.blume .schein{position:absolute;inset:8% 14% 22%;border-radius:50%;z-index:-1;
+  background:radial-gradient(circle,rgba(47,210,140,.30),transparent 66%);
+  opacity:0;transition:opacity .35s}
+.blume:hover .schein,.blume:focus-visible .schein{opacity:1}
+.hinweis{margin-top:2px;font-size:14.5px;color:var(--mut);font-weight:600;letter-spacing:.01em}
+
+/* Wind — dieselbe Bewegung wie in der App */
+@keyframes windB{0%,100%{transform:rotate(-2.2deg) translateX(-1.4px)}
+  35%{transform:rotate(2.8deg) translateX(1.8px)} 68%{transform:rotate(-1deg) translateX(-.7px)}}
+@keyframes headSway{0%,100%{transform:rotate(1.4deg)}50%{transform:rotate(-1.8deg)}}
+@keyframes leafFlutter{0%,100%{transform:rotate(-.8deg)}50%{transform:rotate(1.1deg)}}
+@keyframes pulseGlow{0%,100%{opacity:.3}50%{opacity:.9}}
+.wind3{animation:windB 5.2s ease-in-out infinite}
+.wind2{animation:windB 6.5s ease-in-out infinite}
+.wind1{animation:headSway 9s ease-in-out infinite}
+.head{animation:headSway 7.4s ease-in-out infinite}
+.frond{animation:leafFlutter 5.8s ease-in-out infinite}
+.pulse{animation:pulseGlow 2.6s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){
+  .wind1,.wind2,.wind3,.head,.frond,.pulse{animation:none}
+  .blume{transition:none}
+}
+
+/* ---- Knopf ---- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  padding:15px 28px;border-radius:14px;font-weight:660;font-size:16.5px;
+  text-decoration:none;border:0;cursor:pointer;font-family:inherit;
+  background:linear-gradient(135deg,var(--gruen),var(--tuerkis));color:#04231a;
+  box-shadow:0 10px 30px -10px rgba(47,210,140,.65);transition:transform .16s,box-shadow .2s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 18px 38px -12px rgba(47,210,140,.75)}
+.btn:active{transform:translateY(0)}
+
+/* ---- Text ---- */
+.lead{font-size:clamp(17px,2.6vw,19.5px);color:var(--mut);margin-top:16px}
+.karten{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-top:34px}
+.karte{background:var(--karte);border:1px solid var(--line);border-radius:16px;padding:18px 18px 20px;
+  backdrop-filter:blur(6px)}
+.karte h3{font-size:16px;margin-bottom:6px}
+.karte p{font-size:14.8px;color:var(--mut);line-height:1.55}
+.karte .sym{width:34px;height:34px;border-radius:11px;display:flex;align-items:center;justify-content:center;
+  margin-bottom:11px;background:rgba(47,210,140,.14)}
+.karte .sym svg{width:19px;height:19px;stroke:var(--gruen);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.block{margin-top:42px}
+.block h2{margin-bottom:10px}
+.block p{color:var(--mut);font-size:16px}
+.block p+p{margin-top:12px}
+
+.hinweiskasten{margin-top:34px;background:rgba(240,185,90,.07);border:1px solid rgba(240,185,90,.28);
+  border-radius:16px;padding:18px}
+.hinweiskasten h3{font-size:15.5px;margin-bottom:7px;color:var(--gold)}
+.hinweiskasten p{font-size:14.6px;color:#cbb894;line-height:1.6}
+.hinweiskasten p+p{margin-top:9px}
+
+.fuss{margin-top:52px;padding-top:22px;border-top:1px solid var(--line);
+  display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;justify-content:space-between}
+.fuss a{color:var(--mut);text-decoration:none;font-size:14.5px;border-bottom:1px solid transparent}
+.fuss a:hover{color:var(--txt);border-bottom-color:var(--line)}
+.fuss .rechts{display:flex;gap:18px;flex-wrap:wrap}
+.mitte{text-align:center}
+[lang-de],[lang-en]{display:none}
+html[data-lang="de"] [lang-de]{display:revert}
+html[data-lang="en"] [lang-en]{display:revert}
+</style>
+<style>
+.wrap{max-width:680px}
+.inhalt h2{font-size:19px;margin:30px 0 8px}
+.inhalt h2:first-child{margin-top:0}
+.inhalt p{color:var(--mut);font-size:15.8px}
+.inhalt p+p{margin-top:10px}
+.inhalt ul{color:var(--mut);font-size:15.8px;padding-left:20px;margin:8px 0}
+.inhalt li{margin:4px 0}
+.fuellen{background:rgba(240,185,90,.08);border:1px solid rgba(240,185,90,.3);border-radius:12px;
+  padding:12px 14px;color:#cbb894;font-size:14.5px;margin:10px 0}
+.zurueck{display:inline-flex;align-items:center;gap:7px;text-decoration:none;
+  color:var(--mut);font-size:15px;margin-bottom:22px}
+.zurueck:hover{color:var(--txt)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="kopf">
+    <a class="marke" href="index.html" style="text-decoration:none"><i></i>BloomGoal</a>
+    <div class="langsw" role="group" aria-label="Sprache / Language">
+      <button data-lang="de">DE</button><button data-lang="en">EN</button>
+    </div>
+  </header>
+  <a class="zurueck" href="index.html">← <span lang-de>Zurück zur Startseite</span><span lang-en>Back to the start page</span></a>
+  <h1><span lang-de>Impressum</span><span lang-en>Legal notice</span></h1>
+  <div class="inhalt" style="margin-top:22px">
+
+    <h2><span lang-de>Angaben gemäß § 5 DDG</span><span lang-en>Provider information</span></h2>
+    <p>Maria Schmidt<br>
+    Debussyweg 5<br>
+    80939 München<br>
+    Deutschland</p>
+
+    <h2><span lang-de>Kontakt</span><span lang-en>Contact</span></h2>
+    <p><span lang-de>E-Mail:</span><span lang-en>Email:</span> <a href="mailto:amraiys@mail.de">amraiys@mail.de</a></p>
+
+    <h2><span lang-de>Verantwortlich für den Inhalt</span><span lang-en>Responsible for content</span></h2>
+    <p>Maria Schmidt, Debussyweg 5, 80939 München</p>
+
+    <h2><span lang-de>Streitbeilegung</span><span lang-en>Dispute resolution</span></h2>
+    <p><span lang-de>Ich bin nicht bereit und nicht verpflichtet, an Streitbeilegungsverfahren vor einer
+       Verbraucherschlichtungsstelle teilzunehmen.</span>
+       <span lang-en>I am neither willing nor obliged to participate in dispute resolution proceedings
+       before a consumer arbitration board.</span></p>
+  </div>
+  <footer class="fuss">
+    <span style="color:var(--mut);font-size:14.5px">© 2026 Maria Schmidt</span>
+    <span class="rechts">
+      <a href="impressum.html"><span lang-de>Impressum</span><span lang-en>Legal notice</span></a>
+      <a href="datenschutz.html"><span lang-de>Datenschutz</span><span lang-en>Privacy</span></a>
+      <a href="app/"><span lang-de>Zur App</span><span lang-en>To the app</span></a>
+    </span>
+  </footer>
+</div>
+<script>
+/* Sprache: gespeicherte Wahl, sonst die des Browsers */
+(function(){
+  function erkennen(){
+    try{
+      var n=(navigator.languages&&navigator.languages[0])||navigator.language||'de';
+      return /^de/i.test(n)?'de':'en';
+    }catch(e){ return 'de'; }
+  }
+  function setzen(l){
+    l=(l==='en')?'en':'de';
+    document.documentElement.setAttribute('data-lang',l);
+    document.documentElement.setAttribute('lang',l);
+    try{ localStorage.setItem('bloomgoal.site.lang',l); }catch(e){}
+    var b=document.querySelectorAll('.langsw button');
+    for(var i=0;i<b.length;i++){
+      var an=b[i].getAttribute('data-lang')===l;
+      b[i].className=an?'on':'';
+      b[i].setAttribute('aria-pressed',an?'true':'false');
+    }
+    document.title = l==='en'
+      ? 'BloomGoal Coach — Let your goals grow'
+      : 'BloomGoal Coach — Lass deine Ziele wachsen';
+  }
+  var gespeichert=null;
+  try{ gespeichert=localStorage.getItem('bloomgoal.site.lang'); }catch(e){}
+  setzen(gespeichert==='de'||gespeichert==='en' ? gespeichert : erkennen());
+  document.addEventListener('click',function(e){
+    var t=e.target.closest && e.target.closest('.langsw button');
+    if(t) setzen(t.getAttribute('data-lang'));
+  });
+})();
+</script>
+</body>
+</html>
