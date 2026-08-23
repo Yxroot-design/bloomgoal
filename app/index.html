@@ -1,10 +1,27 @@
 <!DOCTYPE html>
+<!--
+  BloomGoal Coach — https://bloomgoal.de
+  © 2026 Maria Schmidt, München. Alle Rechte vorbehalten. / All rights reserved.
+
+  Konzept, Gestaltung und Quelltext dieser Anwendung sind urheberrechtlich
+  geschützt (§ 2 und § 69a UrhG). Vervielfältigung, Bearbeitung, Verbreitung
+  oder Veröffentlichung — ganz oder in Teilen — nur mit schriftlicher
+  Zustimmung der Urheberin.
+
+  Concept, design and source code of this application are protected by
+  copyright. No part may be copied, modified, distributed or published
+  without the author's written permission.
+
+  Kontakt / Contact: amraiys@mail.de
+-->
 <html lang="de">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=yes">
 <title>BloomGoal Coach</title>
 <meta name="description" content="BloomGoal Coach — goal coaching where every goal grows as a cyberflower. Zielerreichung: jedes Ziel wächst als Cyberblume.">
+<meta name="author" content="Maria Schmidt">
+<meta name="copyright" content="© 2026 Maria Schmidt — bloomgoal.de">
 <meta name="theme-color" content="#080e1c">
 <meta name="color-scheme" content="dark">
 <!-- Auf dem Handy „Zum Home-Bildschirm" ergibt eine App ohne Browserleiste -->
@@ -1221,7 +1238,8 @@ TXT.de.UI={
   pdfStepsDone:'Schritte erledigt', pdfPointsEarned:'Wachstumspunkte',
   pdfCreated:'Erstellt am', pdfNoGoals:'Noch keine Ziele angelegt.',
   pdfOpen:'Offene Schritte', pdfDone:'Erledigt', pdfNothing:'Keine Schritte.',
-  pdfFooter:'BloomGoal Coach · Alle Daten bleiben auf deinem Gerät.',
+  pdfFooter:'BloomGoal Coach · © 2026 Maria Schmidt · bloomgoal.de · Alle Daten bleiben auf deinem Gerät.',
+  copyright:'© 2026 Maria Schmidt · bloomgoal.de · Alle Rechte vorbehalten.',
   backupBtn:'Sicherungsdatei (zum Zurückholen)',
   privacyNote:'Alles bleibt auf diesem Gerät. Es werden keine Daten übertragen, '+
     'es gibt kein Konto und keine Anmeldung. Auf dem Handy kannst du die Seite über '+
@@ -1387,7 +1405,8 @@ TXT.en.UI={
   pdfStepsDone:'steps completed', pdfPointsEarned:'growth points',
   pdfCreated:'Created on', pdfNoGoals:'No goals yet.',
   pdfOpen:'Open steps', pdfDone:'Completed', pdfNothing:'No steps.',
-  pdfFooter:'BloomGoal Coach · All data stays on your device.',
+  pdfFooter:'BloomGoal Coach · © 2026 Maria Schmidt · bloomgoal.de · All data stays on your device.',
+  copyright:'© 2026 Maria Schmidt · bloomgoal.de · All rights reserved.',
   backupBtn:'Backup file (for restoring)',
   privacyNote:'Everything stays on this device. No data is sent anywhere, '+
     'there is no account and no sign-up. On a phone you can use '+
@@ -1710,7 +1729,9 @@ function viewGarden(){
     <div class="card">
       <h3 style="margin-bottom:8px">${W('legend')}</h3>
       <p class="small mut">${W('legendText')}</p>
-    </div>`;
+    </div>
+    <p class="small mut" style="text-align:center;margin-top:20px;opacity:.7">
+      ${W('copyright')}</p>`;
 }
 
 /* ==========================================================================
