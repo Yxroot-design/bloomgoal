@@ -291,6 +291,15 @@ body.druckt .wrap,body.druckt .tabs{visibility:hidden}
 .steps i{flex:1;height:3px;border-radius:99px;background:var(--line)}
 .steps i.on{background:var(--grow)}
 .empty{text-align:center;padding:40px 20px;color:var(--mut)}
+
+/* Rechtliche Fußzeile — steht unter jeder Ansicht, weil das Impressum
+   von jeder Seite aus mit einem Klick erreichbar sein muss. */
+.rechtsfuss{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;
+  gap:6px 14px;margin:26px 0 4px;padding-top:14px;border-top:1px solid var(--line);
+  font-size:12.5px;color:var(--mut);text-align:center}
+.rechtsfuss a{color:var(--mut);text-decoration:none;border-bottom:1px solid transparent}
+.rechtsfuss a:hover,.rechtsfuss a:focus-visible{color:var(--txt);border-bottom-color:var(--line2)}
+@media print{.rechtsfuss{display:none}}
 </style>
 </head>
 <body>
@@ -1240,6 +1249,7 @@ TXT.de.UI={
   pdfOpen:'Offene Schritte', pdfDone:'Erledigt', pdfNothing:'Keine Schritte.',
   pdfFooter:'BloomGoal Coach · © 2026 Maria Schmidt · bloomgoal.de · Alle Daten bleiben auf deinem Gerät.',
   copyright:'© 2026 Maria Schmidt · bloomgoal.de · Alle Rechte vorbehalten.',
+  imprint:'Impressum', privacyPage:'Datenschutz',
   backupBtn:'Sicherungsdatei (zum Zurückholen)',
   privacyNote:'Alles bleibt auf diesem Gerät. Es werden keine Daten übertragen, '+
     'es gibt kein Konto und keine Anmeldung. Auf dem Handy kannst du die Seite über '+
@@ -1407,6 +1417,7 @@ TXT.en.UI={
   pdfOpen:'Open steps', pdfDone:'Completed', pdfNothing:'No steps.',
   pdfFooter:'BloomGoal Coach · © 2026 Maria Schmidt · bloomgoal.de · All data stays on your device.',
   copyright:'© 2026 Maria Schmidt · bloomgoal.de · All rights reserved.',
+  imprint:'Legal notice', privacyPage:'Privacy',
   backupBtn:'Backup file (for restoring)',
   privacyNote:'Everything stays on this device. No data is sent anywhere, '+
     'there is no account and no sign-up. On a phone you can use '+
@@ -1566,6 +1577,19 @@ function renderNav(){
   $('nav').innerHTML=items.map(([v,label,ic])=>
     `<button class="tab ${VIEW.name===v?'on':''}" data-go="${v}">${ICON[ic]}<span>${label}</span></button>`
   ).join('');
+}
+
+/* Rechtliche Fußzeile. Absolute Adressen, damit die Links auch dann greifen,
+   wenn jemand die Datei weitergibt oder direkt öffnet. Neues Tab, damit
+   niemand beim Nachlesen seine Ansicht verliert. */
+function rechtFooter(){
+  const a=(pfad,text)=>`<a href="https://bloomgoal.de/${pfad}"
+    target="_blank" rel="noopener noreferrer">${text}</a>`;
+  return `<footer class="rechtsfuss">
+    <span>${W('copyright')}</span>
+    ${a('impressum.html',W('imprint'))}
+    ${a('datenschutz.html',W('privacyPage'))}
+  </footer>`;
 }
 
 /* Sprachumschalter — zwei kleine Knöpfe, die aktuelle Sprache ist hervorgehoben */
@@ -1729,9 +1753,7 @@ function viewGarden(){
     <div class="card">
       <h3 style="margin-bottom:8px">${W('legend')}</h3>
       <p class="small mut">${W('legendText')}</p>
-    </div>
-    <p class="small mut" style="text-align:center;margin-top:20px;opacity:.7">
-      ${W('copyright')}</p>`;
+    </div>`;
 }
 
 /* ==========================================================================
@@ -3024,7 +3046,7 @@ function renderView(){
   const app=$('app');
   if(!app) throw new Error('Der Anzeigebereich fehlt im Dokument');
   /* Der Sprachumschalter steht über jeder Ansicht, nicht nur auf zweien */
-  app.innerHTML=`<div class="topbar">${langSwitch()}</div>`+html;
+  app.innerHTML=`<div class="topbar">${langSwitch()}</div>`+html+rechtFooter();
   renderNav();
   if(VIEW.name==='new'){
     /* autofocus greift nach innerHTML nicht mehr — Feld selbst fokussieren */
