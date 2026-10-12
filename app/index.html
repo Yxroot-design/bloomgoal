@@ -24,6 +24,8 @@
 <meta name="copyright" content="© 2026 Maria Schmidt — bloomgoal.de">
 <meta name="theme-color" content="#080e1c">
 <meta name="color-scheme" content="dark">
+<!-- Macht die Seite installierbar: eigenes Symbol, ohne Browserleiste, offline -->
+<link rel="manifest" href="manifest.json">
 <!-- Auf dem Handy „Zum Home-Bildschirm" ergibt eine App ohne Browserleiste -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -3155,6 +3157,16 @@ try{
   render();
 }catch(err){
   showError(err,'Start');
+}
+</script>
+<script>
+/* Hintergrunddienst anmelden — damit die App ohne Internet startet und
+   sich auf dem Startbildschirm ablegen lässt. Schlägt das fehl, läuft
+   die App ganz normal weiter; deshalb nur ein stilles catch. */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  });
 }
 </script>
 </body>
